@@ -366,7 +366,7 @@ export default function Analyze() {
                 <FlaskConical size={18} color="var(--accent)" />
                 Instant Demo Scenarios (No File Required)
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(240px, 100%), 1fr))', gap: '1rem' }}>
                 <button
                   onClick={() => handleDemo('fake')}
                   className="btn btn-secondary"

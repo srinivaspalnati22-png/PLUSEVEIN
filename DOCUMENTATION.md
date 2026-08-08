@@ -38,6 +38,11 @@ graph TB
     BE -->|service_role| SB_DB["Supabase Postgres DB"]
 ```
 
+## Live Deployment Links
+
+- 🌐 **Vercel Live Frontend App**: [https://frontend-ochre-kappa-13.vercel.app](https://frontend-ochre-kappa-13.vercel.app)
+- ⚡ **FastAPI Backend API Docs**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+
 ## Running the Application
 
 ### Frontend (Live on http://localhost:5173)

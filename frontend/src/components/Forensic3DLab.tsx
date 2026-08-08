@@ -36,7 +36,7 @@ export function Forensic3DLab({ onComplete, demoResult, actualResult }: Props) {
     demoResultRef.current = demoResult
   }, [demoResult])
 
-  // Listen to mouse movement for 3D face orbiting
+  // Listen to mouse and touch movement for 3D face orbiting
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       const cx = window.innerWidth / 2
@@ -44,8 +44,20 @@ export function Forensic3DLab({ onComplete, demoResult, actualResult }: Props) {
       mousePos.current.targetX = (e.clientX - cx) / cx
       mousePos.current.targetY = (e.clientY - cy) / cy
     }
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches.length > 0) {
+        const cx = window.innerWidth / 2
+        const cy = window.innerHeight / 2
+        mousePos.current.targetX = (e.touches[0].clientX - cx) / cx
+        mousePos.current.targetY = (e.touches[0].clientY - cy) / cy
+      }
+    }
     window.addEventListener('mousemove', handleMouseMove, { passive: true })
-    return () => window.removeEventListener('mousemove', handleMouseMove)
+    window.addEventListener('touchmove', handleTouchMove, { passive: true })
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('touchmove', handleTouchMove)
+    }
   }, [])
 
   // Progress & Stage sequence timer
