@@ -103,29 +103,29 @@ export default function Dashboard() {
   }
 
   return (
-    <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '3rem 1.5rem', position: 'relative', zIndex: 1 }}>
+    <div style={{ maxWidth: '1360px', margin: '0 auto', padding: '3.5rem 1.5rem', position: 'relative', zIndex: 1 }}>
       {/* Header Banner */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2.5rem', flexWrap: 'wrap', gap: '1.5rem' }}>
         <div>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: 'var(--accent)', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 800, marginBottom: '0.5rem', background: 'rgba(0, 200, 150, 0.1)', padding: '0.35rem 0.875rem', borderRadius: '20px', border: '1px solid rgba(0, 200, 150, 0.3)' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: 'var(--cyan)', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 800, marginBottom: '0.5rem', background: 'rgba(0, 240, 255, 0.1)', padding: '0.35rem 0.875rem', borderRadius: '20px', border: '1px solid rgba(0, 240, 255, 0.3)' }}>
             <FolderArchive size={16} />
             Forensic Evidence Locker
           </div>
-          <h1 style={{ fontSize: 'clamp(2rem, 3.5vw, 2.75rem)', fontWeight: 900, color: '#ffffff', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
+          <h1 style={{ fontSize: 'clamp(2.2rem, 4vw, 3.25rem)', fontWeight: 900, color: '#ffffff', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
             Evidence Locker & Analysis Archive
           </h1>
-          <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem', fontSize: '0.975rem' }}>
-            Auditor: <strong style={{ color: '#ffffff' }}>{user?.email || 'analyst@realitycheck.ai'}</strong> | Complete forensic case history and Deepfake Fingerprints™.
+          <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem', fontSize: '1rem' }}>
+            Auditor: <strong style={{ color: '#ffffff' }}>{user?.email || 'analyst@pulsevein.ai'}</strong> | Complete forensic case history and Deepfake Fingerprints™.
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '0.75rem' }}>
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
           <button onClick={exportCSV} className="btn btn-secondary" style={{ padding: '0.75rem 1.25rem', fontSize: '0.85rem' }}>
             <Download size={16} />
             Export Locker CSV
           </button>
 
-          <Link to="/analyze" className="btn btn-primary" style={{ padding: '0.75rem 1.5rem', fontSize: '0.85rem', fontWeight: 800, background: '#00c896', color: '#080d1a' }}>
+          <Link to="/analyze" className="btn btn-primary" style={{ padding: '0.75rem 1.5rem', fontSize: '0.85rem', fontWeight: 900 }}>
             <Scan size={16} />
             Start Investigation
           </Link>

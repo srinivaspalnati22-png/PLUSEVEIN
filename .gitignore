@@ -30,3 +30,5 @@ Thumbs.db
 
 # Large media / cache
 .tempmediaStorage/
+models_cache/
+backend/models_cache/

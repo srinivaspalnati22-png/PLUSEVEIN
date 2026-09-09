@@ -1,0 +1,61 @@
+{
+  "benchmark_timestamp": "2026-09-07 16:38:55 UTC",
+  "engine_version": "v2.2.0",
+  "sample_count": 2,
+  "metrics": {
+    "accuracy": 1.0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1_score": 1.0,
+    "roc_auc": 1.0,
+    "false_positive_rate": 0.0,
+    "false_negative_rate": 0.0
+  },
+  "confusion_matrix": {
+    "true_positives": 1,
+    "true_negatives": 1,
+    "false_positives": 0,
+    "false_negatives": 0,
+    "inconclusive": 0
+  },
+  "test_cases": [
+    {
+      "test_id": "TEST_REAL_01",
+      "filename": "known_real.mp4",
+      "ground_truth": "REAL",
+      "predicted_verdict": "LIKELY AUTHENTIC",
+      "authenticity_score": 91,
+      "authenticity_probability": 0.9104804305590902,
+      "confidence_score": 0.78,
+      "analysis_quality": 93,
+      "detector_agreement": 1.0,
+      "consensus_status": "STRONG_CONSENSUS",
+      "sha256": "f0cc34805b73d3b7c854ae94aabcad9451c9152eeb04e73c2693653f0a81d891",
+      "explainable_reasons": [
+        "\u2705 Physiological Blood Flow (rPPG): Periodic blood volume pulse detected at ~70 BPM with 78% coherence (SNR: +5.5 dB). Consistent with genuine cutaneous micro-circulation.",
+        "\u26a0\ufe0f Audio-Visual Lip-Sync DSP: Insufficient signal quality (Audio track is silent or contains no active vocal speech phonemes.)",
+        "\u2705 Eye Blink Dynamics (EAR): Natural ocular dynamics verified: 1 blink(s) detected (~10.0 blinks/min)."
+      ],
+      "inconclusive_reasons": []
+    },
+    {
+      "test_id": "TEST_FAKE_01",
+      "filename": "known_fake.mp4",
+      "ground_truth": "FAKE",
+      "predicted_verdict": "LIKELY MANIPULATED",
+      "authenticity_score": 24,
+      "authenticity_probability": 0.23685498427314458,
+      "confidence_score": 0.7,
+      "analysis_quality": 93,
+      "detector_agreement": 0.6,
+      "consensus_status": "MODERATE_CONSENSUS",
+      "sha256": "479a955938507e5c93f049d5bd03c9d74674bd12d408d7d1eb4efb82306a8ade",
+      "explainable_reasons": [
+        "\u26d4 Physiological Blood Flow (rPPG): No coherent cardiovascular blood volume pulse detected despite adequate lighting (coherence 30%, SNR -3.6 dB). Absence of hemoglobin color oscillation is characteristic of synthetic diffusion or face replacement.",
+        "\u26a0\ufe0f Audio-Visual Lip-Sync DSP: Insufficient signal quality (Audio track is silent or contains no active vocal speech phonemes.)",
+        "\u26a0\ufe0f Head Pose Kinematic Stability: Insufficient signal quality (Short tracking window (< 15 valid frames). 3D pose trajectory insufficient for statistical kinematics.)"
+      ],
+      "inconclusive_reasons": []
+    }
+  ]
+}

@@ -81,8 +81,9 @@ class TestPipelineRegression(unittest.TestCase):
         self.assertLess(fake_ens.overall_score, real_ens.overall_score,
                         f"Fake video score ({fake_ens.overall_score}) is not lower than Real video score ({real_ens.overall_score})!")
 
-        self.assertIn(fake_ens.verdict, ["FAKE", "LIKELY FAKE"],
+        self.assertIn(fake_ens.verdict, ["FAKE", "LIKELY FAKE", "LIKELY MANIPULATED"],
                       f"Fake video failed to trigger fake verdict: {fake_ens.verdict}")
+
 
         self.assertLessEqual(fake_ens.overall_score, 35,
                              f"Fake video failed biological veto rule: {fake_ens.overall_score}")

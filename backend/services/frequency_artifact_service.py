@@ -10,8 +10,8 @@ Returns score (0–100), high-frequency residual ratio, artifact magnitude, and 
 """
 import cv2
 import numpy as np
-from dataclasses import dataclass
-from typing import Optional
+from dataclasses import dataclass, field
+from typing import Optional, Dict, Any
 
 
 @dataclass
@@ -21,6 +21,9 @@ class FrequencyArtifactResult:
     checkerboard_magnitude: float # Spectral grid magnitude
     finding: str
     confidence: float           # Detector confidence 0–1
+    status: str = "supporting_authenticity"  # supporting_authenticity | supporting_manipulation | insufficient_signal
+    quality: str = "GOOD"                    # EXCELLENT | GOOD | WEAK | POOR
+    evidence: Dict[str, Any] = field(default_factory=dict)
 
 
 def analyze_frequency_artifacts(
@@ -43,31 +46,41 @@ def analyze_frequency_artifacts(
 
     if len(residuals) < 5:
         return FrequencyArtifactResult(
-            score=50,
+            score=65,
             high_freq_residual=0.1,
             checkerboard_magnitude=0.0,
-            finding="Insufficient valid face frames for 2D spatial frequency spectrum analysis.",
-            confidence=0.4,
+            finding="Insufficient valid face frames (< 5) for 2D spatial frequency spectrum analysis.",
+            confidence=0.40,
+            status="insufficient_signal",
+            quality="POOR",
+            evidence={"face_frames_analyzed": len(residuals), "min_required": 5}
         )
 
     avg_residual = float(np.mean(residuals))
     avg_checkerboard = float(np.mean(checkerboard_mags))
 
     # Score calculation strictly:
-    # High-frequency residual power > 0.40 indicates artificial upsampling checkerboard grid patterns in 2D FFT.
+    # High-frequency residual power > 0.34 indicates artificial upsampling checkerboard grid patterns in 2D FFT.
     # Authentic optical camera frames exhibit smooth high-frequency decay (< 0.28).
-    if avg_residual > 0.40:
+    if avg_residual > 0.34:
         score = 22
         finding = f"Generative AI frequency artifacts detected ({avg_residual:.3f} high-frequency residual power). Upsampling checkerboard patterns present in 2D FFT spectrum."
         confidence = 0.88
-    elif avg_residual > 0.32:
+        status = "supporting_manipulation"
+        quality = "EXCELLENT" if len(residuals) >= 20 else "GOOD"
+    elif avg_residual > 0.28:
         score = 48
         finding = f"Moderate high-frequency residual energy detected ({avg_residual:.3f}). Possible neural compression or diffusion reconstruction noise."
-        confidence = 0.75
+        confidence = 0.70
+        status = "insufficient_signal"
+        quality = "GOOD"
+
     else:
         score = 88
         finding = f"Natural spatial frequency spectrum verified (spectral residual {avg_residual:.3f}). Zero artificial upsampling grid artifacts detected."
         confidence = 0.88
+        status = "supporting_authenticity"
+        quality = "EXCELLENT" if len(residuals) >= 20 else "GOOD"
 
     return FrequencyArtifactResult(
         score=score,
@@ -75,7 +88,15 @@ def analyze_frequency_artifacts(
         checkerboard_magnitude=round(avg_checkerboard, 3),
         finding=finding,
         confidence=confidence,
+        status=status,
+        quality=quality,
+        evidence={
+            "avg_high_frequency_residual": round(avg_residual, 4),
+            "avg_checkerboard_magnitude": round(avg_checkerboard, 4),
+            "frames_analyzed": len(residuals),
+        }
     )
+
 
 
 def _compute_frame_2d_fft(roi: np.ndarray) -> tuple[Optional[float], Optional[float]]:

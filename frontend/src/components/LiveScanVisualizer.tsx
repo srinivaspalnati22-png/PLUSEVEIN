@@ -4,7 +4,9 @@ interface Props {
   isActive: boolean
   mode?: 'scanning' | 'analyzing'
   label?: string
-  bpm?: number
+  bpm?: number | null
+  faceDetected?: boolean
+  faceBbox?: { x: number; y: number; w: number; h: number } | null
 }
 
 interface Particle {
@@ -21,6 +23,8 @@ export function LiveScanVisualizer({
   mode = 'scanning',
   label = '3D Sub-Surface Bio-Scanner',
   bpm = 72,
+  faceDetected = false,
+  faceBbox = null,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const [scanMessage, setScanMessage] = useState('Detecting Face...')
@@ -28,20 +32,23 @@ export function LiveScanVisualizer({
   // Scan stage text cycle
   useEffect(() => {
     if (!isActive) return
+    if (!faceDetected) {
+      setScanMessage('Searching for subject...')
+      return
+    }
     const messages = [
-      'Detecting Face...',
-      'Tracking 468 3D Landmarks...',
-      'Extracting rPPG Blood Flow...',
-      'Synchronizing Audio Envelopes...',
-      'Running Deepfake Analysis...',
+      'Subject Locked • Tracking 478 3D Landmarks...',
+      'Extracting rPPG Green Hemoglobin Flow...',
+      'Analyzing Craniofacial Morphology...',
+      'Synchronizing Cardiac Hemodynamics...',
     ]
     let idx = 0
     const interval = setInterval(() => {
       idx = (idx + 1) % messages.length
       setScanMessage(messages[idx])
-    }, 1400)
+    }, 1500)
     return () => clearInterval(interval)
-  }, [isActive])
+  }, [isActive, faceDetected])
 
   // Canvas 60 FPS Render Loop
   useEffect(() => {
@@ -87,7 +94,8 @@ export function LiveScanVisualizer({
       const bottom = cy + faceH / 2 + 15
 
       // Heartbeat pulse calculation
-      const pulsePhase = (Math.sin(time * (bpm / 60) * Math.PI * 2) + 1) / 2
+      const safeBpm = bpm || 72
+      const pulsePhase = (Math.sin(time * (safeBpm / 60) * Math.PI * 2) + 1) / 2
 
       // 1. Blood Flow Color Cycling: Dark Blue -> Purple -> Red -> Bright Red -> Dark Blue
       // Cycle position 0..1
@@ -250,16 +258,16 @@ export function LiveScanVisualizer({
       // 7. Top Biometric Scanning Stage Banner
       ctx.fillStyle = 'rgba(8, 13, 26, 0.88)'
       ctx.fillRect(left, top - 36, 290, 28)
-      ctx.fillStyle = '#00f2fe'
+      ctx.fillStyle = !faceDetected ? '#f59e0b' : '#00f2fe'
       ctx.font = '800 11px Inter, sans-serif'
-      ctx.fillText(`● BIO-SCANNER: ${scanMessage}`, left + 12, top - 18)
+      ctx.fillText(`● ${!faceDetected ? 'STATUS' : 'BIO-SCANNER'}: ${scanMessage}`, left + 12, top - 18)
 
       animationId = requestAnimationFrame(render)
     }
 
     render()
     return () => cancelAnimationFrame(animationId)
-  }, [isActive, mode, label, bpm])
+  }, [isActive, mode, label, bpm, faceDetected])
 
   if (!isActive) return null
 

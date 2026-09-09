@@ -101,43 +101,44 @@ export default function Auth() {
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <div
             style={{
-              width: '48px',
-              height: '48px',
-              borderRadius: '12px',
-              background: 'linear-gradient(135deg, #00c896 0%, #00f2fe 100%)',
+              width: '52px',
+              height: '52px',
+              borderRadius: '14px',
+              background: 'linear-gradient(135deg, var(--cyan) 0%, var(--crimson) 100%)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              margin: '0 auto 1rem',
-              boxShadow: '0 0 25px rgba(0, 200, 150, 0.4)',
+              margin: '0 auto 1.25rem',
+              boxShadow: '0 0 30px var(--accent-glow)',
             }}
           >
-            <Activity size={26} color="#080d1a" strokeWidth={2.8} />
+            <Activity size={28} color="#030712" strokeWidth={2.8} />
           </div>
-          <h1 style={{ fontSize: '1.85rem', fontWeight: 900, color: '#ffffff', letterSpacing: '-0.02em', marginBottom: '0.35rem' }}>
-            {tab === 'login' ? 'Sign in to Pulsevein' : 'Create Forensic Account'}
+          <h1 style={{ fontSize: '2rem', fontWeight: 900, color: '#ffffff', letterSpacing: '-0.02em', marginBottom: '0.45rem' }}>
+            {tab === 'login' ? 'Sign in to PULSEVEIN' : 'Create Forensic Account'}
           </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-            Access multimodal deepfake forensic intelligence & history
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
+            Access multimodal deepfake forensic intelligence & evidence archives
           </p>
         </div>
 
         {/* Auth Card */}
-        <div className="card-elevated" style={{ padding: '2rem', border: '1px solid rgba(0, 200, 150, 0.3)' }}>
+        <div className="hud-frame" style={{ padding: '2.25rem', border: '1px solid rgba(0, 240, 255, 0.35)' }}>
           {/* Tabs */}
-          <div style={{ display: 'flex', background: 'var(--bg-base)', padding: '0.25rem', borderRadius: 'var(--radius)', marginBottom: '1.5rem', border: '1px solid var(--bg-border)' }}>
+          <div style={{ display: 'flex', background: 'rgba(3, 7, 18, 0.8)', padding: '0.35rem', borderRadius: 'var(--radius)', marginBottom: '1.75rem', border: '1px solid var(--bg-border)' }}>
             <button
               onClick={() => { setTab('login'); setError('') }}
               style={{
                 flex: 1,
-                padding: '0.625rem',
+                padding: '0.65rem',
                 borderRadius: 'var(--radius)',
                 border: 'none',
-                background: tab === 'login' ? 'rgba(0, 200, 150, 0.15)' : 'transparent',
-                color: tab === 'login' ? 'var(--accent)' : 'var(--text-muted)',
+                background: tab === 'login' ? 'rgba(0, 240, 255, 0.15)' : 'transparent',
+                color: tab === 'login' ? 'var(--cyan)' : 'var(--text-muted)',
                 fontWeight: 800,
-                fontSize: '0.85rem',
+                fontSize: '0.9rem',
                 cursor: 'pointer',
+                fontFamily: 'var(--font-heading)',
               }}
             >
               Sign In
@@ -146,14 +147,15 @@ export default function Auth() {
               onClick={() => { setTab('signup'); setError('') }}
               style={{
                 flex: 1,
-                padding: '0.625rem',
+                padding: '0.65rem',
                 borderRadius: 'var(--radius)',
                 border: 'none',
-                background: tab === 'signup' ? 'rgba(0, 200, 150, 0.15)' : 'transparent',
-                color: tab === 'signup' ? 'var(--accent)' : 'var(--text-muted)',
+                background: tab === 'signup' ? 'rgba(0, 240, 255, 0.15)' : 'transparent',
+                color: tab === 'signup' ? 'var(--cyan)' : 'var(--text-muted)',
                 fontWeight: 800,
-                fontSize: '0.85rem',
+                fontSize: '0.9rem',
                 cursor: 'pointer',
+                fontFamily: 'var(--font-heading)',
               }}
             >
               Sign Up

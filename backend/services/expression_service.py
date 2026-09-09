@@ -11,8 +11,8 @@ Analyzes bilateral symmetry ratio and micro-expression temporal velocity.
 Returns score (0–100), motion variance, symmetry ratio, finding, and confidence.
 """
 import numpy as np
-from dataclasses import dataclass
-from typing import Optional
+from dataclasses import dataclass, field
+from typing import Optional, Dict, Any
 
 
 @dataclass
@@ -22,6 +22,9 @@ class ExpressionResult:
     coordination_ratio: float   # Bilateral facial symmetry ratio (0–1)
     finding: str
     confidence: float           # Detector confidence 0–1
+    status: str = "supporting_authenticity"  # supporting_authenticity | supporting_manipulation | insufficient_signal
+    quality: str = "GOOD"                    # EXCELLENT | GOOD | WEAK | POOR
+    evidence: Dict[str, Any] = field(default_factory=dict)
 
 
 def analyze_expressions(
@@ -42,11 +45,14 @@ def analyze_expressions(
 
     if len(au_series) < 15:
         return ExpressionResult(
-            score=82,
+            score=70,
             motion_variance=0.001,
             coordination_ratio=0.92,
-            finding="Facial micro-expression symmetry verified.",
-            confidence=0.85,
+            finding="Short tracking window (< 15 valid frames). Facial micro-expression trajectory insufficient.",
+            confidence=0.50,
+            status="insufficient_signal",
+            quality="WEAK",
+            evidence={"valid_frames": len(au_series), "required_frames": 15}
         )
 
     au_arr = np.array(au_series) # shape (N, 3) AU12, AU4, AU1_2
@@ -57,14 +63,24 @@ def analyze_expressions(
 
     # Score calculation:
     # 1. Natural human facial micro-expressions have gentle motion variance (> 0.0001) & high symmetry (>= 0.70).
-    if symm_ratio >= 0.70:
+    if symm_ratio >= 0.70 and motion_var >= 0.0001:
         score = 85
         finding = f"Natural facial micro-expression dynamics & symmetry verified (coordination {symm_ratio:.0%})."
         confidence = 0.90
+        status = "supporting_authenticity"
+        quality = "EXCELLENT"
+    elif motion_var < 0.00002 and video_duration_s >= 8.0:
+        score = 25
+        finding = f"Unnatural micro-expression paralysis/stasis detected (variance {motion_var:.6f}). Muscle vectors are frozen."
+        confidence = 0.85
+        status = "supporting_manipulation"
+        quality = "GOOD"
     else:
         score = 75
         finding = f"Facial micro-expression symmetry verified (coordination {symm_ratio:.0%})."
-        confidence = 0.82
+        confidence = 0.80
+        status = "supporting_authenticity"
+        quality = "GOOD"
 
     return ExpressionResult(
         score=score,
@@ -72,7 +88,16 @@ def analyze_expressions(
         coordination_ratio=round(symm_ratio, 3),
         finding=finding,
         confidence=confidence,
+        status=status,
+        quality=quality,
+        evidence={
+            "motion_variance": round(motion_var, 6),
+            "coordination_ratio": round(symm_ratio, 3),
+            "frames_analyzed": len(au_series),
+            "video_duration_s": round(video_duration_s, 2),
+        }
     )
+
 
 
 def _extract_frame_aus(lm: dict) -> Optional[tuple[float, float, float]]:

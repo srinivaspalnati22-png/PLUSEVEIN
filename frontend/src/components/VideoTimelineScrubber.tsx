@@ -1,146 +1,133 @@
 import { useState } from 'react'
-import { Play, Pause, AlertTriangle, CheckCircle, Clock, Zap } from 'lucide-react'
+import { Clock, AlertTriangle, CheckCircle, ShieldAlert } from 'lucide-react'
+import type { TimelineSegment } from '@/lib/api'
 
 interface Props {
-  duration: number
-  overallScore: number
-  rppgScore: number
-  lipsyncScore: number
-  verdict: string
+  segments?: TimelineSegment[]
+  duration_s?: number
+  tamperingTimestamps?: number[]
+  duration?: number
+  overallScore?: number
+  rppgScore?: number
+  lipsyncScore?: number
+  verdict?: string
 }
 
-export function VideoTimelineScrubber({ duration = 15, overallScore, rppgScore, lipsyncScore, verdict }: Props) {
-  const [currentSecond, setCurrentSecond] = useState(3.5)
-  const [isPlaying, setIsPlaying] = useState(false)
+export function VideoTimelineScrubber({
+  segments = [],
+  duration_s,
+  tamperingTimestamps = [],
+  duration,
+  overallScore,
+}: Props) {
+  const effectiveDuration = duration_s || duration || 15.0
+  const score = overallScore || 50
 
-  // Generate 15 timeline sample points across the video duration
-  const numSteps = Math.max(10, Math.floor(duration))
-  const isFake = verdict.includes('FAKE')
+  // If no segments were provided, generate default 3-4 segments
+  const activeSegments: TimelineSegment[] = segments.length > 0 ? segments : [
+    { segment_index: 0, start_time_s: 0.0, end_time_s: Math.min(effectiveDuration, 4.0), authenticity_score: score, risk_level: score >= 60 ? 'LOW' : 'HIGH', flags: ['Forensic scan window'] },
+    { segment_index: 1, start_time_s: 4.0, end_time_s: Math.min(effectiveDuration, 8.0), authenticity_score: score, risk_level: score >= 60 ? 'LOW' : 'HIGH', flags: ['Signal continuity tracking'] },
+    { segment_index: 2, start_time_s: 8.0, end_time_s: effectiveDuration, authenticity_score: score, risk_level: score >= 60 ? 'LOW' : 'MEDIUM', flags: ['Multi-signal agreement'] },
+  ]
 
-  const timelineData = Array.from({ length: numSteps }, (_, i) => {
-    const sec = (i * (duration / numSteps)).toFixed(1)
-    const isAnomaly = isFake && (i === 6 || i === 7 || i === 12) // Simulated desync spike points
-    const rppgVal = isFake ? Math.floor(10 + Math.random() * 25) : Math.floor(70 + Math.random() * 25)
-    const lipSyncVal = isAnomaly ? Math.floor(15 + Math.random() * 15) : Math.floor(80 + Math.random() * 18)
-    return {
-      second: Number(sec),
-      rppgVal,
-      lipSyncVal,
-      isAnomaly,
-    }
-  })
 
-  // Find active step based on current second
-  const currentStep = timelineData.find(d => Math.abs(d.second - currentSecond) < (duration / numSteps)) || timelineData[0]
+  const [selectedSegment, setSelectedSegment] = useState<TimelineSegment | null>(activeSegments[0] || null)
+
 
   return (
-    <div className="card-elevated" style={{ padding: '1.75rem', borderColor: 'rgba(0, 200, 150, 0.3)', marginBottom: '2rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
-        <div>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: 'var(--accent)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700 }}>
-            <Clock size={15} />
-            Interactive Frame-by-Frame Inspector
-          </div>
-          <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#ffffff', marginTop: '0.2rem' }}>
-            Video Timeline & Desync Scrubber
+    <div className="hud-frame p-5 bg-slate-900/40 border border-white/10 space-y-4">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="flex items-center gap-2">
+          <Clock className="w-4 h-4 text-cyan-400" />
+          <h3 className="text-xs font-mono font-bold text-white uppercase tracking-wider">
+            Segment-Level Forensic Timeline Analysis
           </h3>
         </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
-            Timestamp: <strong style={{ color: 'var(--accent)' }}>{currentSecond.toFixed(1)}s</strong> / {duration.toFixed(1)}s
+        <div className="flex items-center gap-4 text-xs font-mono">
+          <span className="flex items-center gap-1.5 text-emerald-400">
+            <span className="w-2 h-2 rounded-full bg-emerald-400" /> Low Risk
+          </span>
+          <span className="flex items-center gap-1.5 text-amber-400">
+            <span className="w-2 h-2 rounded-full bg-amber-400" /> Medium
+          </span>
+          <span className="flex items-center gap-1.5 text-rose-400">
+            <span className="w-2 h-2 rounded-full bg-rose-400" /> High Anomaly
           </span>
         </div>
       </div>
 
-      {/* Scrubbing Bar */}
-      <div style={{ marginBottom: '1.5rem' }}>
-        <input
-          type="range"
-          min="0"
-          max={duration}
-          step="0.1"
-          value={currentSecond}
-          onChange={e => setCurrentSecond(Number(e.target.value))}
-          style={{
-            width: '100%',
-            height: '8px',
-            accentColor: currentStep.isAnomaly ? '#ef4444' : 'var(--accent)',
-            cursor: 'pointer',
-            marginBottom: '0.5rem',
-          }}
-        />
+      {/* Segment Bar */}
+      <div className="relative h-9 bg-slate-950 rounded-xl overflow-hidden border border-white/10 flex p-1 gap-1">
+        {segments.length > 0 ? (
+          segments.map((seg, idx) => {
+            const isSelected = selectedSegment?.segment_index === seg.segment_index
+            const colorClass =
+              seg.risk_level === 'HIGH'
+                ? 'bg-rose-500/30 border-rose-500/60 text-rose-300 hover:bg-rose-500/40'
+                : seg.risk_level === 'MEDIUM'
+                ? 'bg-amber-500/30 border-amber-500/60 text-amber-300 hover:bg-amber-500/40'
+                : 'bg-emerald-500/30 border-emerald-500/60 text-emerald-300 hover:bg-emerald-500/40'
 
-        {/* Visual Marker Timeline Graph */}
-        <div style={{ display: 'flex', gap: '3px', height: '48px', alignItems: 'flex-end', background: 'var(--bg-base)', padding: '6px', borderRadius: 'var(--radius)', border: '1px solid var(--bg-border)' }}>
-          {timelineData.map((d, idx) => {
-            const isSelected = Math.abs(d.second - currentSecond) < (duration / numSteps)
             return (
-              <div
+              <button
                 key={idx}
-                onClick={() => setCurrentSecond(d.second)}
-                title={`At ${d.second}s: LipSync ${d.lipSyncVal}%, rPPG ${d.rppgVal}%`}
-                style={{
-                  flex: 1,
-                  height: `${d.lipSyncVal}%`,
-                  background: d.isAnomaly ? '#ef4444' : isSelected ? '#00f2fe' : 'rgba(0, 200, 150, 0.4)',
-                  borderRadius: '2px',
-                  cursor: 'pointer',
-                  border: isSelected ? '1px solid #ffffff' : 'none',
-                  transition: 'all 0.2s',
-                }}
-              />
+                onClick={() => setSelectedSegment(seg)}
+                className={`flex-1 h-full rounded-lg border text-[10px] font-mono font-semibold flex items-center justify-center transition-all ${colorClass} ${
+                  isSelected ? 'ring-2 ring-cyan-400 shadow-md shadow-cyan-500/20' : ''
+                }`}
+                title={`Segment ${idx + 1}: ${seg.start_time_s}s - ${seg.end_time_s}s (Risk: ${seg.risk_level})`}
+              >
+                {seg.start_time_s.toFixed(0)}s–{seg.end_time_s.toFixed(0)}s
+              </button>
             )
-          })}
-        </div>
-      </div>
-
-      {/* Second-by-Second Signal Breakdown Inspection Card */}
-      <div style={{ background: 'var(--bg-surface)', padding: '1.25rem', borderRadius: 'var(--radius)', border: `1px solid ${currentStep.isAnomaly ? 'rgba(239, 68, 68, 0.5)' : 'var(--bg-border)'}` }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Zap size={16} color={currentStep.isAnomaly ? '#ef4444' : 'var(--accent)'} />
-            <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#ffffff' }}>
-              Frame Inspection at {currentStep.second.toFixed(1)}s
-            </span>
-          </div>
-
-          <span
-            style={{
-              fontSize: '0.75rem',
-              fontWeight: 800,
-              padding: '0.25rem 0.65rem',
-              borderRadius: '9999px',
-              background: currentStep.isAnomaly ? 'var(--danger-bg)' : 'rgba(34, 197, 94, 0.15)',
-              color: currentStep.isAnomaly ? 'var(--danger)' : '#22c55e',
-            }}
-          >
-            {currentStep.isAnomaly ? '🔴 DESYNC ANOMALY DETECTED' : '✓ BIOMETRIC MATCH'}
-          </span>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginTop: '0.75rem' }}>
-          <div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Lip-Sync Aperture Delta</div>
-            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: currentStep.isAnomaly ? '#ef4444' : '#00f2fe' }}>
-              {currentStep.lipSyncVal}% Match
-            </div>
-          </div>
-
-          <div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>rPPG Sub-surface Signal</div>
-            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: isFake ? '#ef4444' : 'var(--accent)' }}>
-              {currentStep.rppgVal}% Coherence
-            </div>
-          </div>
-        </div>
-
-        {currentStep.isAnomaly && (
-          <div style={{ marginTop: '0.75rem', fontSize: '0.825rem', color: '#ef4444', background: 'rgba(239, 68, 68, 0.1)', padding: '0.5rem 0.75rem', borderRadius: 'var(--radius)', border: '1px solid rgba(239, 68, 68, 0.25)' }}>
-            ⚠️ <strong>Phase Offset Spike:</strong> Audio speech envelope energy detected while mouth landmark aperture #14 remained stationary (142ms desync gap).
+          })
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-xs font-mono text-slate-500">
+            Uniform continuous timeline • Zero segment anomalies
           </div>
         )}
+
+        {/* Anomaly Timestamp Markers */}
+        {tamperingTimestamps.map((ts, idx) => {
+          const leftPct = Math.min(96, Math.max(4, (ts / effectiveDuration) * 100))
+          return (
+            <div
+              key={idx}
+              className="absolute top-0 bottom-0 w-1 bg-rose-500 pointer-events-none shadow-[0_0_8px_#f43f5e]"
+              style={{ left: `${leftPct}%` }}
+              title={`Anomaly spike at ${ts}s`}
+            />
+          )
+        })}
       </div>
+
+      {/* Selected Segment Inspection Detail */}
+      {selectedSegment && (
+        <div className="p-3.5 rounded-xl bg-slate-950/70 border border-white/5 flex items-start justify-between gap-4 text-xs font-mono">
+          <div className="space-y-1">
+            <span className="text-slate-400">
+              Selected Window: <strong className="text-white">{selectedSegment.start_time_s}s – {selectedSegment.end_time_s}s</strong>
+            </span>
+            <div className="flex items-center gap-2 mt-1">
+              <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                selectedSegment.risk_level === 'HIGH' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' :
+                selectedSegment.risk_level === 'MEDIUM' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
+                'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+              }`}>
+                {selectedSegment.risk_level} RISK
+              </span>
+              <span className="text-slate-300">
+                Segment Authenticity Score: <strong>{selectedSegment.authenticity_score}%</strong>
+              </span>
+            </div>
+            {selectedSegment.flags && selectedSegment.flags.length > 0 && (
+              <p className="text-[11px] text-cyan-300 pt-1">
+                Flags: {selectedSegment.flags.join(', ')}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

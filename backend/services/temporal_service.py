@@ -15,6 +15,10 @@ from dataclasses import dataclass
 from typing import Optional
 
 
+from dataclasses import dataclass, field
+from typing import Optional, Dict, Any
+
+
 @dataclass
 class TemporalResult:
     score: int                  # 0–100 (higher = more likely real)
@@ -22,6 +26,9 @@ class TemporalResult:
     max_discontinuity_mse: float# Max frame-to-frame pixel delta MSE
     finding: str
     confidence: float           # Detector confidence 0–1
+    status: str = "supporting_authenticity"  # supporting_authenticity | supporting_manipulation | insufficient_signal
+    quality: str = "GOOD"                    # EXCELLENT | GOOD | WEAK | POOR
+    evidence: Dict[str, Any] = field(default_factory=dict)
 
 
 def analyze_temporal_continuity(
@@ -34,11 +41,14 @@ def analyze_temporal_continuity(
     valid_rois = [r for r in face_rois if r is not None and r.size > 0]
     if len(valid_rois) < 10:
         return TemporalResult(
-            score=50,
+            score=65,
             ssim_avg=0.85,
             max_discontinuity_mse=0.0,
-            finding="Insufficient face frames to evaluate temporal structural continuity.",
-            confidence=0.4,
+            finding="Insufficient face frames (< 10) to evaluate temporal structural continuity.",
+            confidence=0.40,
+            status="insufficient_signal",
+            quality="POOR",
+            evidence={"valid_face_frames": len(valid_rois), "min_required": 10}
         )
 
     mses = []
@@ -55,11 +65,14 @@ def analyze_temporal_continuity(
 
     if not mses:
         return TemporalResult(
-            score=50,
+            score=65,
             ssim_avg=0.85,
             max_discontinuity_mse=0.0,
             finding="Could not process frame pairs for temporal continuity analysis.",
-            confidence=0.4,
+            confidence=0.40,
+            status="insufficient_signal",
+            quality="POOR",
+            evidence={"error": "Frame pair computation yielded empty results"}
         )
 
     avg_ssim = float(np.mean(ssims))
@@ -67,19 +80,26 @@ def analyze_temporal_continuity(
     mse_std = float(np.std(mses))
 
     # Score calculation
-    # High frame-to-frame MSE variance (>25.0) or sudden SSIM drop indicates temporal flickering / boundary warping
-    if max_mse > 35.0 or avg_ssim < 0.65:
+    # High frame-to-frame MSE variance with low SSIM indicates temporal flickering / boundary warping
+    if avg_ssim < 0.65 or (max_mse > 45.0 and avg_ssim < 0.78):
         score = 25
-        finding = f"Severe temporal frame discontinuity detected (max MSE {max_mse:.1f}). High frame-to-frame boundary flickering indicative of AI video synthesis."
+        finding = f"Severe temporal frame discontinuity detected (max MSE {max_mse:.1f}, SSIM {avg_ssim:.2f}). High boundary flickering indicative of AI video synthesis."
         confidence = 0.85
-    elif max_mse > 18.0 or avg_ssim < 0.80:
+        status = "supporting_manipulation"
+        quality = "GOOD"
+    elif max_mse > 25.0 and avg_ssim < 0.82:
         score = 48
         finding = f"Moderate temporal flickering detected (max MSE {max_mse:.1f}). Inconsistent illumination or face boundary warping present."
-        confidence = 0.75
+        confidence = 0.70
+        status = "insufficient_signal"
+        quality = "GOOD"
     else:
         score = 89
         finding = f"Smooth temporal frame continuity verified (SSIM {avg_ssim:.2f}, max MSE {max_mse:.1f}). Zero artificial frame boundary flickering detected."
         confidence = 0.88
+        status = "supporting_authenticity"
+        quality = "EXCELLENT" if len(valid_rois) >= 30 else "GOOD"
+
 
     return TemporalResult(
         score=score,
@@ -87,7 +107,16 @@ def analyze_temporal_continuity(
         max_discontinuity_mse=round(max_mse, 2),
         finding=finding,
         confidence=confidence,
+        status=status,
+        quality=quality,
+        evidence={
+            "avg_ssim": round(avg_ssim, 3),
+            "max_discontinuity_mse": round(max_mse, 2),
+            "mse_std": round(mse_std, 2),
+            "frame_pairs_analyzed": len(mses),
+        }
     )
+
 
 
 def _compute_pair_continuity(roi1: np.ndarray, roi2: np.ndarray) -> tuple[Optional[float], Optional[float]]:

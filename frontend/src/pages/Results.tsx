@@ -111,15 +111,15 @@ export default function Results() {
           <button
             onClick={() => setShowQRMorph(true)}
             className="btn btn-secondary"
-            style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', color: '#00c896', borderColor: 'rgba(0, 200, 150, 0.4)' }}
+            style={{ padding: '0.55rem 1.15rem', fontSize: '0.85rem', color: 'var(--cyan)' }}
           >
             <Smartphone size={16} />
             Mobile QR Sync
           </button>
           <ForensicReportExport result={result} />
-          <Link to="/analyze" className="btn btn-primary" style={{ padding: '0.5rem 1.25rem', fontSize: '0.85rem', fontWeight: 800, background: '#00c896', color: '#080d1a' }}>
+          <Link to="/analyze" className="btn btn-primary" style={{ padding: '0.55rem 1.35rem', fontSize: '0.85rem' }}>
             <Scan size={16} />
-            New Scan
+            New Forensic Scan
           </Link>
         </div>
       </div>

@@ -14,6 +14,10 @@ from dataclasses import dataclass
 from typing import Optional
 
 
+from dataclasses import dataclass, field
+from typing import Optional, Dict, Any
+
+
 @dataclass
 class BlinkResult:
     score: int                  # 0–100 (higher = more likely real)
@@ -22,6 +26,9 @@ class BlinkResult:
     avg_ear: float              # Average Eye Aspect Ratio
     finding: str
     confidence: float           # Detector confidence 0–1
+    status: str = "supporting_authenticity"  # supporting_authenticity | supporting_manipulation | insufficient_signal
+    quality: str = "GOOD"                    # EXCELLENT | GOOD | WEAK | POOR
+    evidence: Dict[str, Any] = field(default_factory=dict)
 
 
 LEFT_EYE_INDICES = [362, 385, 387, 263, 373, 380]
@@ -46,12 +53,20 @@ def analyze_blinks(
 
     if len(ear_series) < 15:
         return BlinkResult(
-            score=80,
+            score=70,
             blink_count=0,
             blink_rate_per_min=0.0,
             avg_ear=0.25,
-            finding="Short video clip sequence. Ocular dynamics verified.",
-            confidence=0.80,
+            finding="Short video clip sequence (< 1s face tracking). Ocular dynamics insufficient for statistical evaluation.",
+            confidence=0.50,
+            status="insufficient_signal",
+            quality="WEAK",
+            evidence={
+                "frames_analyzed": len(ear_series),
+                "required_frames": 15,
+                "blink_count": 0,
+                "status_reason": "Insufficient frame count for reliable blink detection"
+            }
         )
 
     ear_arr = np.array(ear_series)
@@ -76,20 +91,27 @@ def analyze_blinks(
     blink_rate_pm = blink_count / duration_min
 
     # Score calculation calibrated for both long videos and short webcam clips:
-    # 1. Zero blinks over a long video (>= 10s) indicates synthetic avatar stasis.
-    # 2. For short clips (< 10s), 0 or 1 blink is 100% normal human eye behavior.
-    if video_duration_s >= 10.0 and blink_count == 0 and ear_var < 0.0001:
+    # 1. Zero blinks over extended video (>= 14.0s) with zero ocular variance indicates synthetic avatar stasis.
+    # 2. For clips (< 14s), 0 or 1 blink is normal human eye behavior and supports authenticity.
+    if video_duration_s >= 14.0 and blink_count == 0 and ear_var < 0.0001:
         score = 22
-        finding = f"Zero eye blinks detected over {video_duration_s:.1f}s video duration. Unnatural ocular stasis indicative of synthetic video rendering."
+        finding = f"Zero eye blinks detected over {video_duration_s:.1f}s extended duration. Unnatural ocular stasis indicative of synthetic video rendering."
         confidence = 0.88
+        status = "supporting_manipulation"
+        quality = "GOOD"
+
     elif blink_count >= 1 or (8.0 <= blink_rate_pm <= 35.0):
         score = 88
         finding = f"Natural ocular dynamics verified: {blink_count} blink(s) detected (~{blink_rate_pm:.1f} blinks/min)."
         confidence = 0.90
+        status = "supporting_authenticity"
+        quality = "EXCELLENT" if blink_count >= 2 else "GOOD"
     else:
         score = 80
-        finding = f"Ocular stability verified: {blink_count} blink(s) detected (~{blink_rate_pm:.1f} blinks/min)."
-        confidence = 0.85
+        finding = f"Natural ocular stability verified: {blink_count} blink(s) detected across {video_duration_s:.1f}s duration."
+        confidence = 0.78
+        status = "supporting_authenticity"
+        quality = "GOOD"
 
     return BlinkResult(
         score=score,
@@ -98,7 +120,18 @@ def analyze_blinks(
         avg_ear=round(avg_ear, 3),
         finding=finding,
         confidence=confidence,
+        status=status,
+        quality=quality,
+        evidence={
+            "blink_count": blink_count,
+            "blink_rate_per_min": round(blink_rate_pm, 1),
+            "avg_ear": round(avg_ear, 3),
+            "ear_variance": round(ear_var, 6),
+            "video_duration_s": round(video_duration_s, 2),
+            "frames_analyzed": len(ear_series),
+        }
     )
+
 
 
 def _compute_frame_ear(lm: dict) -> Optional[float]:

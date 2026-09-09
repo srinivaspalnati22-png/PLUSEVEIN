@@ -8,8 +8,8 @@ Returns score (0–100), angular variance, max jitter spike, finding, and confid
 """
 import cv2
 import numpy as np
-from dataclasses import dataclass
-from typing import Optional
+from dataclasses import dataclass, field
+from typing import Optional, Dict, Any
 
 
 @dataclass
@@ -19,6 +19,9 @@ class HeadPoseResult:
     max_jitter_spike: float     # Max frame-to-frame rotational acceleration (deg/frame^2)
     finding: str
     confidence: float           # Detector confidence 0–1
+    status: str = "supporting_authenticity"  # supporting_authenticity | supporting_manipulation | insufficient_signal
+    quality: str = "GOOD"                    # EXCELLENT | GOOD | WEAK | POOR
+    evidence: Dict[str, Any] = field(default_factory=dict)
 
 
 def analyze_headpose(
@@ -39,11 +42,14 @@ def analyze_headpose(
 
     if len(poses) < 15:
         return HeadPoseResult(
-            score=82,
+            score=70,
             angular_variance=0.1,
             max_jitter_spike=0.0,
-            finding="3D head pose kinematics stable and continuous.",
-            confidence=0.85,
+            finding="Short tracking window (< 15 valid frames). 3D pose trajectory insufficient for statistical kinematics.",
+            confidence=0.50,
+            status="insufficient_signal",
+            quality="WEAK",
+            evidence={"valid_frames": len(poses), "required_frames": 15}
         )
 
     poses_arr = np.array(poses) # shape (N, 3) pitch, yaw, roll in degrees
@@ -56,19 +62,25 @@ def analyze_headpose(
 
     # Score calculation:
     # 1. Extreme rotational jitter (> 15.0 deg/f^2) indicates facial swapping warping artifacts.
-    # 2. Stable pose (variance <= 20.0 deg^2 and jitter <= 8.0) indicates authentic human camera motion.
+    # 2. Stable pose (variance <= 25.0 deg^2 and jitter <= 8.0) indicates authentic human camera motion.
     if max_spike > 15.0:
         score = 24
         finding = f"Sudden rotational head pose warp spike ({max_spike:.1f}°/f²). Deepfake face-swapping warping artifact detected."
         confidence = 0.88
+        status = "supporting_manipulation"
+        quality = "GOOD"
     elif angular_var <= 25.0 and max_spike <= 8.0:
         score = 85
         finding = f"Natural 3D head pose trajectory verified (variance {angular_var:.2f}°², max jitter {max_spike:.1f}°/f²)."
         confidence = 0.90
+        status = "supporting_authenticity"
+        quality = "EXCELLENT"
     else:
-        score = 78
+        score = 75
         finding = f"3D head pose motion continuous (variance {angular_var:.2f}°², jitter {max_spike:.1f}°/f²)."
-        confidence = 0.82
+        confidence = 0.80
+        status = "supporting_authenticity"
+        quality = "GOOD"
 
     return HeadPoseResult(
         score=score,
@@ -76,7 +88,16 @@ def analyze_headpose(
         max_jitter_spike=round(max_spike, 2),
         finding=finding,
         confidence=confidence,
+        status=status,
+        quality=quality,
+        evidence={
+            "angular_variance_deg2": round(angular_var, 3),
+            "max_jitter_spike_deg_f2": round(max_spike, 2),
+            "tracked_frames": len(poses),
+            "fps": fps
+        }
     )
+
 
 
 def _estimate_frame_headpose(lm: dict) -> Optional[tuple[float, float, float]]:

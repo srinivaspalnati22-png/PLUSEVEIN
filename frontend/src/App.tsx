@@ -15,6 +15,7 @@ import Results from '@/pages/Results'
 import Methodology from '@/pages/Methodology'
 import LiveMonitor from '@/pages/LiveMonitor'
 import Settings from '@/pages/Settings'
+import Evaluation from '@/pages/Evaluation'
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
             <Route path="/" element={<Landing />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/methodology" element={<Methodology />} />
+            <Route path="/evaluation" element={<Evaluation />} />
             <Route path="/results/:id" element={<Results />} />
             <Route path="/analyze" element={
               <PrivateRoute><Analyze /></PrivateRoute>
@@ -41,6 +43,7 @@ function App() {
             <Route path="/settings" element={
               <PrivateRoute><Settings /></PrivateRoute>
             } />
+
             {/* 404 */}
             <Route path="*" element={
               <div style={{ textAlign: 'center', padding: '6rem 1.5rem', color: 'var(--text-muted)', position: 'relative', zIndex: 1 }}>

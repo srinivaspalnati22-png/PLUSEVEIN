@@ -51,43 +51,43 @@ axios.post('http://localhost:8000/api/analyze', form, {
   }
 
   return (
-    <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '3rem 1.5rem', position: 'relative', zIndex: 1 }}>
+    <div style={{ maxWidth: '1360px', margin: '0 auto', padding: '3.5rem 1.5rem', position: 'relative', zIndex: 1 }}>
       {/* Header Banner */}
       <div style={{ marginBottom: '2.5rem' }}>
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: 'var(--accent)', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 800, marginBottom: '0.5rem', background: 'rgba(0, 200, 150, 0.1)', padding: '0.35rem 0.875rem', borderRadius: '20px', border: '1px solid rgba(0, 200, 150, 0.3)' }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: 'var(--cyan)', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 800, marginBottom: '0.5rem', background: 'rgba(0, 240, 255, 0.1)', padding: '0.35rem 0.875rem', borderRadius: '20px', border: '1px solid rgba(0, 240, 255, 0.3)' }}>
           <Sliders size={16} />
           System Preferences
         </div>
-        <h1 style={{ fontSize: 'clamp(2rem, 3.5vw, 2.75rem)', fontWeight: 900, color: '#ffffff', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
+        <h1 style={{ fontSize: 'clamp(2.2rem, 4vw, 3.25rem)', fontWeight: 900, color: '#ffffff', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
           Forensic Engine & Developer API Hub
         </h1>
-        <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem', fontSize: '0.975rem' }}>
+        <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem', fontSize: '1rem' }}>
           Calibrate ensemble weighting thresholds, developer API key access, and webhook integrations.
         </p>
       </div>
 
       {saved && (
-        <div style={{ background: 'rgba(34, 197, 94, 0.15)', border: '1px solid #22c55e', color: '#22c55e', padding: '1rem 1.25rem', borderRadius: 'var(--radius-lg)', marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 800 }}>
-          <CheckCircle2 size={20} />
+        <div style={{ background: 'rgba(0, 245, 155, 0.15)', border: '1px solid var(--emerald)', color: '#ffffff', padding: '1rem 1.25rem', borderRadius: 'var(--radius-lg)', marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 800 }}>
+          <CheckCircle2 size={20} color="var(--emerald)" />
           System preferences updated successfully.
         </div>
       )}
 
       <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem', maxWidth: '880px' }}>
         {/* User Profile Card */}
-        <div className="card-elevated" style={{ padding: '2rem', border: '1px solid rgba(0, 200, 150, 0.3)' }}>
+        <div className="hud-frame" style={{ padding: '2rem', border: '1px solid rgba(0, 240, 255, 0.3)' }}>
           <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#ffffff', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <User size={20} color="var(--accent)" />
+            <User size={20} color="var(--cyan)" />
             Authenticated User Profile
           </h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
             <div>
               <label style={{ display: 'block', fontSize: '0.825rem', color: 'var(--text-secondary)', fontWeight: 700, marginBottom: '0.35rem' }}>User Email</label>
-              <input type="text" value={user?.email || 'analyst@realitycheck.ai'} disabled style={{ width: '100%', background: 'var(--bg-base)', border: '1px solid var(--bg-border)', borderRadius: 'var(--radius)', padding: '0.75rem', color: '#ffffff', fontSize: '0.9rem', opacity: 0.8 }} />
+              <input type="text" value={user?.email || 'analyst@pulsevein.ai'} disabled style={{ width: '100%', background: 'var(--bg-base)', border: '1px solid var(--bg-border)', borderRadius: 'var(--radius)', padding: '0.75rem', color: '#ffffff', fontSize: '0.9rem', opacity: 0.8, fontFamily: 'var(--font-mono)' }} />
             </div>
             <div>
               <label style={{ display: 'block', fontSize: '0.825rem', color: 'var(--text-secondary)', fontWeight: 700, marginBottom: '0.35rem' }}>Account Role</label>
-              <input type="text" value="Forensic Auditor (Authorized)" disabled style={{ width: '100%', background: 'var(--bg-base)', border: '1px solid var(--bg-border)', borderRadius: 'var(--radius)', padding: '0.75rem', color: 'var(--accent)', fontWeight: 800, fontSize: '0.9rem', opacity: 0.9 }} />
+              <input type="text" value="Forensic Auditor (Authorized)" disabled style={{ width: '100%', background: 'var(--bg-base)', border: '1px solid var(--bg-border)', borderRadius: 'var(--radius)', padding: '0.75rem', color: 'var(--cyan)', fontWeight: 800, fontSize: '0.9rem', opacity: 0.9, fontFamily: 'var(--font-mono)' }} />
             </div>
           </div>
         </div>

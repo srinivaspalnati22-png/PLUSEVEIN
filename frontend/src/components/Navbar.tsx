@@ -1,14 +1,42 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/lib/auth'
-import { Activity, LogOut, Scan, Radio, Cpu, Sliders, Play, FolderArchive, Moon, Sun, Menu, X } from 'lucide-react'
+import {
+  HeartPulse,
+  LogOut,
+  Scan,
+  Radio,
+  Cpu,
+  Sliders,
+  FolderArchive,
+  Palette,
+  Menu,
+  X,
+  BarChart3,
+  Sparkles,
+} from 'lucide-react'
+
+type PaletteTheme = 'abyss' | 'crimson' | 'matrix' | 'oled'
 
 export function Navbar() {
   const { user, signOut } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const [isOled, setIsOled] = useState(false)
+  const [currentTheme, setCurrentTheme] = useState<PaletteTheme>('abyss')
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+
+  // Initialize theme from localStorage if set
+  useEffect(() => {
+    const saved = localStorage.getItem('pv_theme') as PaletteTheme | null
+    if (saved) {
+      setCurrentTheme(saved)
+      if (saved === 'abyss') {
+        document.documentElement.removeAttribute('data-theme')
+      } else {
+        document.documentElement.setAttribute('data-theme', saved)
+      }
+    }
+  }, [])
 
   const handleSignOut = async () => {
     await signOut()
@@ -16,287 +44,216 @@ export function Navbar() {
     navigate('/')
   }
 
-  const toggleTheme = () => {
-    const nextOled = !isOled
-    setIsOled(nextOled)
-    if (nextOled) {
-      document.documentElement.setAttribute('data-theme', 'oled')
-    } else {
+  const cycleTheme = () => {
+    const themes: PaletteTheme[] = ['abyss', 'crimson', 'matrix', 'oled']
+    const nextIdx = (themes.indexOf(currentTheme) + 1) % themes.length
+    const nextTheme = themes[nextIdx]
+    setCurrentTheme(nextTheme)
+    localStorage.setItem('pv_theme', nextTheme)
+    if (nextTheme === 'abyss') {
       document.documentElement.removeAttribute('data-theme')
+    } else {
+      document.documentElement.setAttribute('data-theme', nextTheme)
+    }
+  }
+
+  const getThemeLabel = (t: PaletteTheme) => {
+    switch (t) {
+      case 'abyss': return 'Abyss'
+      case 'crimson': return 'Neon'
+      case 'matrix': return 'Matrix'
+      case 'oled': return 'OLED'
     }
   }
 
   const isActive = (path: string) => location.pathname === path
 
   const navItems = [
-    { label: 'Verify', path: '/analyze', icon: <Scan size={18} /> },
-    { label: 'Investigate', path: '/methodology', icon: <Cpu size={18} /> },
-    { label: 'Evidence Locker', path: '/dashboard', icon: <FolderArchive size={18} /> },
-    { label: 'Insights', path: '/monitor', icon: <Radio size={18} /> },
+    { label: 'Analyzer', path: '/analyze', icon: <Scan size={16} /> },
+    { label: 'Live Monitor', path: '/monitor', icon: <Radio size={16} /> },
+    { label: 'Benchmarks', path: '/evaluation', icon: <BarChart3 size={16} /> },
+    { label: 'Evidence Locker', path: '/dashboard', icon: <FolderArchive size={16} /> },
+    { label: 'Architecture', path: '/methodology', icon: <Cpu size={16} /> },
   ]
 
   return (
-    <nav
-      style={{
-        background: isOled ? 'rgba(0, 0, 0, 0.95)' : 'rgba(5, 9, 20, 0.88)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-        borderBottom: '1px solid rgba(0, 242, 254, 0.2)',
-        position: 'sticky',
-        top: 0,
-        zIndex: 100,
-        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)',
-        transition: 'background-color 0.3s ease',
-      }}
-    >
-      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 1.25rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '64px' }}>
+    <header className="sticky top-0 z-50 w-full border-b border-white/[0.08] bg-slate-950/80 backdrop-blur-xl transition-all duration-200 shadow-lg shadow-black/20">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16">
           {/* Brand Logo */}
-          <Link to="/" onClick={() => setIsMobileMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', textDecoration: 'none' }}>
-            <div
-              style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: '10px',
-                background: 'linear-gradient(135deg, #00f2fe 0%, #00c896 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 0 20px rgba(0, 242, 254, 0.4)',
-                flexShrink: 0,
-              }}
-            >
-              <Activity size={22} color="#050914" strokeWidth={2.8} />
+          <Link
+            to="/"
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="flex items-center gap-3 group text-decoration-none"
+          >
+            <div className="relative w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 via-teal-400 to-emerald-400 p-[1.5px] shadow-md shadow-cyan-500/20 group-hover:shadow-cyan-500/40 transition-all duration-300">
+              <div className="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
+                <HeartPulse className="w-5 h-5 text-cyan-400 group-hover:scale-110 transition-transform duration-200" />
+              </div>
+              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-slate-950 ring-1 ring-emerald-500/50" />
             </div>
-            <span style={{ fontWeight: 900, fontSize: 'clamp(1rem, 4vw, 1.2rem)', color: '#ffffff', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
-              REALITYCHECK<span style={{ color: '#00f2fe' }}> AI</span>
-            </span>
+
+            <div className="flex items-center gap-2">
+              <span className="font-extrabold text-base tracking-tight text-white font-sans">
+                PULSE<span className="text-cyan-400">VEIN</span>
+              </span>
+              <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-mono font-bold tracking-wider bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 uppercase">
+                FORENSIC AI
+              </span>
+            </div>
           </Link>
 
           {/* Desktop Navigation Links */}
-          <div className="hidden md:flex" style={{ alignItems: 'center', gap: '0.35rem' }}>
-            {navItems.map(item => (
-              <Link
-                key={item.path}
-                to={item.path}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.4rem',
-                  padding: '0.45rem 0.85rem',
-                  borderRadius: 'var(--radius)',
-                  color: isActive(item.path) ? '#00f2fe' : 'var(--text-secondary)',
-                  background: isActive(item.path) ? 'rgba(0, 242, 254, 0.12)' : 'transparent',
-                  fontSize: '0.85rem',
-                  fontWeight: 700,
-                  textDecoration: 'none',
-                }}
-              >
-                {item.icon}
-                {item.label}
-              </Link>
-            ))}
-          </div>
+          <nav className="hidden lg:flex items-center gap-1 bg-slate-900/50 p-1 rounded-xl border border-white/[0.06]">
+            {navItems.map(item => {
+              const active = isActive(item.path)
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-mono font-semibold transition-all duration-150 ${
+                    active
+                      ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-400/30 shadow-sm shadow-cyan-500/20'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] border border-transparent'
+                  }`}
+                >
+                  <span className={active ? 'text-cyan-400' : 'text-slate-400'}>
+                    {item.icon}
+                  </span>
+                  {item.label}
+                </Link>
+              )
+            })}
+          </nav>
 
-          {/* Desktop Right Action Menu */}
-          <div className="hidden md:flex" style={{ alignItems: 'center', gap: '0.75rem' }}>
+          {/* Right Action Controls */}
+          <div className="hidden sm:flex items-center gap-2.5">
+            {/* Live System Status Pill */}
+            <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-mono text-[11px] font-medium shadow-sm">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span>SYSTEM ONLINE</span>
+            </div>
+
+            {/* Theme Toggle Button */}
             <button
-              onClick={toggleTheme}
-              title={isOled ? 'Switch to Cyberpunk Dark Theme' : 'Switch to Pure OLED Midnight Theme'}
-              className="btn btn-secondary"
-              style={{
-                padding: '0.4rem 0.75rem',
-                fontSize: '0.75rem',
-                borderColor: isOled ? '#00f2fe' : 'var(--bg-border)',
-                color: isOled ? '#00f2fe' : 'var(--text-muted)',
-                background: isOled ? 'rgba(0, 242, 254, 0.15)' : 'transparent',
-              }}
+              onClick={cycleTheme}
+              title={`Switch Theme (Current: ${getThemeLabel(currentTheme)})`}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-900/60 hover:bg-slate-800 border border-white/[0.08] text-slate-300 hover:text-white font-mono text-xs transition shadow-sm"
             >
-              {isOled ? <Sun size={15} color="#00f2fe" /> : <Moon size={15} />}
-              <span>{isOled ? 'OLED On' : 'OLED Mode'}</span>
+              <Palette size={14} className="text-cyan-400" />
+              <span className="text-[11px] font-medium">{getThemeLabel(currentTheme)}</span>
             </button>
 
-            <Link
-              to="/analyze?demo=true"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                padding: '0.4rem 0.85rem',
-                borderRadius: '20px',
-                background: 'rgba(0, 242, 254, 0.1)',
-                border: '1px solid rgba(0, 242, 254, 0.3)',
-                color: '#00f2fe',
-                fontSize: '0.8rem',
-                fontWeight: 800,
-                textDecoration: 'none',
-              }}
-            >
-              <Play size={14} fill="#00f2fe" />
-              Demo Mode
-            </Link>
-
+            {/* User Authentication Actions */}
             {user ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+              <div className="flex items-center gap-1.5">
                 <Link
                   to="/settings"
-                  style={{
-                    color: isActive('/settings') ? '#00f2fe' : 'var(--text-secondary)',
-                    padding: '0.4rem',
-                  }}
+                  className="p-2 rounded-lg bg-slate-900/60 hover:bg-slate-800 border border-white/[0.08] text-slate-300 hover:text-white transition shadow-sm"
+                  title="Settings & API"
                 >
-                  <Sliders size={18} />
+                  <Sliders size={15} />
                 </Link>
                 <button
                   onClick={handleSignOut}
-                  className="btn btn-secondary"
-                  style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem' }}
+                  className="p-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 hover:text-rose-300 transition shadow-sm"
+                  title="Sign Out"
                 >
-                  <LogOut size={14} />
-                  Sign Out
+                  <LogOut size={15} />
                 </button>
               </div>
             ) : (
-              <Link to="/auth" className="btn btn-primary" style={{ padding: '0.45rem 1.15rem', fontSize: '0.85rem', fontWeight: 800, background: '#00c896', color: '#080d1a' }}>
+              <Link
+                to="/auth"
+                className="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-cyan-500 to-emerald-400 hover:from-cyan-400 hover:to-emerald-300 text-slate-950 font-sans font-bold text-xs shadow-md shadow-cyan-500/20 hover:shadow-cyan-500/30 transition duration-150"
+              >
                 Sign In
               </Link>
             )}
           </div>
 
-          {/* Mobile Hamburger Button */}
-          <div className="flex md:hidden" style={{ alignItems: 'center', gap: '0.5rem' }}>
-            <Link
-              to="/analyze?demo=true"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.25rem',
-                padding: '0.3rem 0.6rem',
-                borderRadius: '16px',
-                background: 'rgba(0, 242, 254, 0.12)',
-                border: '1px solid rgba(0, 242, 254, 0.3)',
-                color: '#00f2fe',
-                fontSize: '0.75rem',
-                fontWeight: 800,
-                textDecoration: 'none',
-              }}
+          {/* Mobile Menu & Theme Controls */}
+          <div className="flex lg:hidden items-center gap-2">
+            <button
+              onClick={cycleTheme}
+              className="p-2 rounded-lg bg-slate-900/60 border border-white/[0.08] text-slate-300"
+              title="Switch Theme"
             >
-              <Play size={12} fill="#00f2fe" />
-              Demo
-            </Link>
-
+              <Palette size={16} className="text-cyan-400" />
+            </button>
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              style={{
-                background: 'rgba(15, 23, 42, 0.8)',
-                border: '1px solid var(--bg-border)',
-                color: '#ffffff',
-                padding: '0.5rem',
-                borderRadius: '8px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-              }}
-              aria-label="Toggle Navigation Menu"
+              className="p-2 rounded-lg bg-slate-900/60 border border-white/[0.08] text-slate-300 hover:text-white"
             >
-              {isMobileMenuOpen ? <X size={22} color="#00f2fe" /> : <Menu size={22} />}
+              {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
           </div>
         </div>
+      </div>
 
-        {/* Mobile Navigation Drawer */}
-        {isMobileMenuOpen && (
-          <div
-            style={{
-              padding: '1rem 0 1.5rem',
-              borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.75rem',
-            }}
-            className="md:hidden"
-          >
-            {navItems.map(item => (
+      {/* Mobile Drawer Menu */}
+      {isMobileMenuOpen && (
+        <div className="lg:hidden border-t border-white/[0.08] bg-slate-950/95 backdrop-blur-2xl px-4 pt-3 pb-5 space-y-2 animate-in slide-in-from-top-2 duration-200">
+          <div className="flex items-center justify-between px-2 py-1 mb-2">
+            <div className="flex items-center gap-2 text-xs font-mono text-emerald-400">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>PIPELINE ONLINE</span>
+            </div>
+            <span className="text-[10px] font-mono text-slate-500">v2.2.0</span>
+          </div>
+
+          {navItems.map(item => {
+            const active = isActive(item.path)
+            return (
               <Link
                 key={item.path}
                 to={item.path}
                 onClick={() => setIsMobileMenuOpen(false)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                  padding: '0.75rem 1rem',
-                  borderRadius: 'var(--radius)',
-                  color: isActive(item.path) ? '#00f2fe' : 'var(--text-primary)',
-                  background: isActive(item.path) ? 'rgba(0, 242, 254, 0.12)' : 'rgba(15, 23, 42, 0.6)',
-                  border: `1px solid ${isActive(item.path) ? 'rgba(0, 242, 254, 0.3)' : 'var(--bg-border)'}`,
-                  fontSize: '0.95rem',
-                  fontWeight: 700,
-                  textDecoration: 'none',
-                }}
+                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-mono font-medium transition ${
+                  active
+                    ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-400/30'
+                    : 'text-slate-300 hover:bg-white/[0.04]'
+                }`}
               >
-                {item.icon}
+                <span className={active ? 'text-cyan-400' : 'text-slate-400'}>
+                  {item.icon}
+                </span>
                 {item.label}
               </Link>
-            ))}
+            )
+          })}
 
-            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
-              <button
-                onClick={toggleTheme}
-                className="btn btn-secondary"
-                style={{
-                  flex: 1,
-                  padding: '0.65rem',
-                  fontSize: '0.85rem',
-                  borderColor: isOled ? '#00f2fe' : 'var(--bg-border)',
-                  color: isOled ? '#00f2fe' : 'var(--text-muted)',
-                  background: isOled ? 'rgba(0, 242, 254, 0.15)' : 'rgba(15, 23, 42, 0.6)',
-                }}
-              >
-                {isOled ? <Sun size={16} color="#00f2fe" /> : <Moon size={16} />}
-                <span>{isOled ? 'OLED Mode' : 'Cyberpunk Dark'}</span>
-              </button>
-
-              {user && (
+          <div className="pt-3 border-t border-white/[0.08]">
+            {user ? (
+              <div className="flex items-center gap-2">
                 <Link
                   to="/settings"
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="btn btn-secondary"
-                  style={{
-                    padding: '0.65rem 1rem',
-                    fontSize: '0.85rem',
-                    color: isActive('/settings') ? '#00f2fe' : 'var(--text-secondary)',
-                  }}
+                  className="flex-1 py-2.5 px-4 rounded-xl bg-slate-900 border border-white/[0.08] text-slate-300 font-mono text-xs flex items-center justify-center gap-2"
                 >
-                  <Sliders size={16} />
+                  <Sliders size={15} />
                   Settings
                 </Link>
-              )}
-            </div>
-
-            {user ? (
-              <button
-                onClick={handleSignOut}
-                className="btn btn-secondary"
-                style={{ width: '100%', padding: '0.75rem', marginTop: '0.25rem', borderColor: 'var(--danger)', color: 'var(--danger)' }}
-              >
-                <LogOut size={16} />
-                Sign Out
-              </button>
+                <button
+                  onClick={handleSignOut}
+                  className="flex-1 py-2.5 px-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 font-mono text-xs flex items-center justify-center gap-2"
+                >
+                  <LogOut size={15} />
+                  Sign Out
+                </button>
+              </div>
             ) : (
               <Link
                 to="/auth"
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="btn btn-primary"
-                style={{ width: '100%', padding: '0.75rem', marginTop: '0.25rem', background: '#00c896', color: '#080d1a', textAlign: 'center' }}
+                className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-cyan-500 to-emerald-400 text-slate-950 font-bold text-center text-xs flex items-center justify-center shadow-md shadow-cyan-500/20"
               >
-                Sign In / Register
+                Sign In
               </Link>
             )}
           </div>
-        )}
-      </div>
-    </nav>
+        </div>
+      )}
+    </header>
   )
 }

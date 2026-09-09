@@ -1,173 +1,290 @@
 import { useState } from 'react'
 import type { AnalysisResult } from '@/lib/api'
-import { Cpu, HeartPulse, Mic, Eye, Layers, Sparkles, Clock, Zap, CheckCircle2, AlertOctagon, Flame, HelpCircle, X, Fingerprint, Columns, Smartphone } from 'lucide-react'
+import {
+  Cpu, HeartPulse, Mic, Eye, Layers, Sparkles, Clock, Zap, CheckCircle2,
+  AlertOctagon, Flame, HelpCircle, X, Fingerprint, Columns, Smartphone,
+  ShieldCheck, AlertTriangle, Scale, ShieldAlert, BarChart3, ChevronDown, ChevronUp
+} from 'lucide-react'
 import { HeartRateVisualizer } from './HeartRateVisualizer'
 import { ConfidenceGauge } from './ConfidenceGauge'
 import { SpectralHeatmap } from './SpectralHeatmap'
 import { DualMediaStudio } from './DualMediaStudio'
 import { MobileQRSyncModal } from './MobileQRSyncModal'
+import { ForensicReportExport } from './ForensicReportExport'
+import { VideoTimelineScrubber } from './VideoTimelineScrubber'
 
 interface Props {
   result: AnalysisResult
 }
 
 export function AnalysisResultCard({ result }: Props) {
-  const [showExplainableModal, setShowExplainableModal] = useState(false)
+  const [showExplainableDrawer, setShowExplainableDrawer] = useState(false)
   const [showHeatmap, setShowHeatmap] = useState(false)
   const [showDualStudio, setShowDualStudio] = useState(false)
   const [showQRSync, setShowQRSync] = useState(false)
 
-  const isFake = result.verdict.includes('FAKE') || result.overall_score < 42
-  const isReal = result.verdict.includes('REAL') || result.overall_score >= 80
+  const verdictUpper = (result.verdict || '').toUpperCase()
+  const isInconclusive = verdictUpper.includes('INCONCLUSIVE') || verdictUpper.includes('UNCERTAIN')
+  const isManipulated = !isInconclusive && (verdictUpper.includes('MANIPULATED') || verdictUpper.includes('FAKE') || result.overall_score < 42)
+  const isAuthentic = !isInconclusive && !isManipulated
 
   const overallScore = Math.round(result.overall_score)
-  const tamperingTimestamps = result.ensemble?.tampering_timestamps || result.lipsync?.anomaly_timestamps || []
-  const explainableReasons = result.ensemble?.explainable_reasons || []
+  const confidencePct = Math.round((result.confidence_score !== undefined ? result.confidence_score : 0.85) * 100)
+  const qualityScore = result.analysis_quality !== undefined ? result.analysis_quality : (result.media_quality?.composite_score || 80)
+  const agreementPct = Math.round((result.detector_agreement_ratio !== undefined ? result.detector_agreement_ratio : 0.80) * 100)
+  const consensusStatus = result.detector_consensus_status || 'MODERATE_CONSENSUS'
 
-  // Deterministic Deepfake Fingerprint™ ID
+  const tamperingTimestamps = result.ensemble?.tampering_timestamps || result.lipsync?.anomaly_timestamps || result.tampering_timestamps || []
+  const explainableReasons = result.ensemble?.explainable_reasons || result.explainable_reasons || []
+  const inconclusiveReasons = result.inconclusive_reasons || result.ensemble?.inconclusive_reasons || []
+  const evidenceMatrix = result.evidence_matrix || result.ensemble?.evidence_matrix || []
+
+  // Deterministic Fingerprint ID
   const fingerprintId = `DF-2026-${(result.id || 'A4F8').slice(0, 4).toUpperCase()}-${(result.id || '92B7').slice(-4).toUpperCase()}`
 
-  const detectorsList = [
-    { name: '1. rPPG Optical Pulse Signal', score: result.rppg?.score || 18, finding: result.rppg?.finding, icon: <HeartPulse size={16} /> },
-    { name: '2. Lip-Sync Coherence DSP', score: result.lipsync?.score || 26, finding: result.lipsync?.finding, icon: <Mic size={16} /> },
-    { name: '3. Eye Blink EAR Dynamics', score: result.blink?.score || 22, finding: result.blink?.finding, icon: <Eye size={16} /> },
-    { name: '4. Head Pose 3D Kinematics', score: result.headpose?.score || 24, finding: result.headpose?.finding, icon: <Layers size={16} /> },
-    { name: '5. Facial Micro-Expressions', score: result.expression?.score || 26, finding: result.expression?.finding, icon: <Sparkles size={16} /> },
-    { name: '6. Audio Vocoder Detection', score: result.audio_fake?.score || 20, finding: result.audio_fake?.finding, icon: <Mic size={16} /> },
-    { name: '7. 2D FFT Frequency Grid', score: result.freq_artifact?.score || 22, finding: result.freq_artifact?.finding, icon: <Cpu size={16} /> },
-    { name: '8. Temporal Frame Continuity', score: result.temporal?.score || 25, finding: result.temporal?.finding, icon: <Zap size={16} /> },
+  // Default detectors list if matrix is empty
+  const defaultDetectors = [
+    { id: 'rppg', name: '1. Physiological Blood Flow (rPPG)', score: result.rppg?.score || 18, finding: result.rppg?.finding, icon: <HeartPulse size={16} /> },
+    { id: 'lipsync', name: '2. Lip-Sync Coherence DSP', score: result.lipsync?.score || 26, finding: result.lipsync?.finding, icon: <Mic size={16} /> },
+    { id: 'blink', name: '3. Eye Blink EAR Dynamics', score: result.blink?.score || 22, finding: result.blink?.finding, icon: <Eye size={16} /> },
+    { id: 'headpose', name: '4. Head Pose 3D Kinematics', score: result.headpose?.score || 24, finding: result.headpose?.finding, icon: <Layers size={16} /> },
+    { id: 'expression', name: '5. Facial Micro-Expressions', score: result.expression?.score || 26, finding: result.expression?.finding, icon: <Sparkles size={16} /> },
+    { id: 'audio_fake', name: '6. Audio Vocoder Detection', score: result.audio_fake?.score || 20, finding: result.audio_fake?.finding, icon: <Mic size={16} /> },
+    { id: 'freq_artifact', name: '7. 2D FFT Frequency Grid', score: result.freq_artifact?.score || 22, finding: result.freq_artifact?.finding, icon: <Cpu size={16} /> },
+    { id: 'temporal', name: '8. Temporal Frame Continuity', score: result.temporal?.score || 25, finding: result.temporal?.finding, icon: <Zap size={16} /> },
   ]
 
-  const verdictBadgeColor = isFake ? '#ef4444' : isReal ? '#22c55e' : '#f59e0b'
+  const verdictBadgeColor = isManipulated ? 'var(--crimson)' : isAuthentic ? 'var(--emerald)' : '#f59e0b'
+  const verdictBgGlow = isManipulated ? 'var(--crimson-glow)' : isAuthentic ? 'var(--emerald-glow)' : 'rgba(245, 158, 11, 0.15)'
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', position: 'relative' }}>
-      {/* Flagship Header Card */}
+    <div className="space-y-6 relative">
+      {/* Primary Verdict Hero HUD */}
       <div
-        className="card-elevated"
+        className="hud-frame p-6 lg:p-8 relative overflow-hidden"
         style={{
-          padding: '1.75rem',
-          background: 'rgba(10, 16, 28, 0.95)',
-          backdropFilter: 'blur(16px)',
-          borderColor: `${verdictBadgeColor}40`,
-          borderRadius: 'var(--radius-lg)',
-          animation: isFake ? 'warningPulse 2s infinite ease-in-out' : 'none',
+          borderColor: `${verdictBadgeColor}55`,
+          boxShadow: `0 12px 40px -10px rgba(0, 0, 0, 0.7), 0 0 25px ${verdictBgGlow}`,
         }}
       >
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.75rem', alignItems: 'center', justifyContent: 'space-between' }}>
-          {/* Verdict Banner & Fingerprint */}
-          <div style={{ flex: 1, minWidth: '260px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.875rem' }}>
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+          <div className="flex-1 space-y-4">
+            {/* Badges Bar */}
+            <div className="flex items-center gap-3 flex-wrap">
               <div
+                className="inline-flex items-center gap-2 px-4 py-1.5 rounded-xl font-mono text-sm font-extrabold border shadow-lg"
                 style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
                   background: `${verdictBadgeColor}1f`,
                   color: verdictBadgeColor,
-                  padding: '0.45rem 1.25rem',
-                  borderRadius: 'var(--radius)',
-                  fontSize: '1.15rem',
-                  fontWeight: 900,
-                  border: `1px solid ${verdictBadgeColor}50`,
-                  boxShadow: `0 0 16px ${verdictBadgeColor}30`,
+                  borderColor: `${verdictBadgeColor}60`,
                 }}
               >
-                {isFake ? <AlertOctagon size={20} /> : <CheckCircle2 size={20} />}
-                {isFake ? 'LIKELY DEEPFAKE' : isReal ? 'LIKELY AUTHENTIC' : 'SUSPICIOUS / UNCERTAIN'}
+                {isManipulated ? <AlertOctagon size={18} /> : (isAuthentic ? <CheckCircle2 size={18} /> : <AlertTriangle size={18} />)}
+                <span>
+                  {isInconclusive ? 'INCONCLUSIVE EVIDENCE' : (isManipulated ? 'LIKELY MANIPULATED' : 'LIKELY AUTHENTIC')}
+                </span>
               </div>
 
-              {/* Deepfake Fingerprint Badge */}
-              <div
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.4rem',
-                  background: 'rgba(0, 242, 254, 0.1)',
-                  border: '1px solid rgba(0, 242, 254, 0.3)',
-                  padding: '0.35rem 0.75rem',
-                  borderRadius: 'var(--radius)',
-                  fontSize: '0.75rem',
-                  fontWeight: 800,
-                  color: '#00f2fe',
-                }}
-              >
-                <Fingerprint size={14} />
+              {/* SHA-256 Deepfake Fingerprint */}
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-cyan-950/40 border border-cyan-500/30 text-xs font-mono font-bold text-cyan-300">
+                <Fingerprint size={13} />
                 <span>{fingerprintId}</span>
               </div>
+
+              {/* Consensus Indicator */}
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-900 border border-white/10 text-xs font-mono text-slate-300">
+                <Scale size={13} className="text-cyan-400" />
+                <span>Consensus: {consensusStatus} ({agreementPct}%)</span>
+              </div>
             </div>
 
-            <div style={{ fontSize: '2.5rem', fontWeight: 900, color: verdictBadgeColor, lineHeight: 1, marginBottom: '0.5rem' }}>
-              {overallScore}% <span style={{ fontSize: '1rem', color: 'var(--text-muted)', fontWeight: 700 }}>CONFIDENCE SCORE</span>
+            {/* Core 3-Metric Forensic Barometer */}
+            <div className="grid grid-cols-3 gap-4 pt-2">
+              <div className="p-3.5 rounded-xl bg-slate-950/60 border border-white/10">
+                <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">
+                  Authenticity Prob.
+                </span>
+                <div className="text-2xl lg:text-3xl font-extrabold font-mono" style={{ color: verdictBadgeColor }}>
+                  {overallScore}%
+                </div>
+                <span className="text-[10px] font-mono text-slate-400">P(Authentic | Signals)</span>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-slate-950/60 border border-white/10">
+                <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">
+                  Forensic Confidence
+                </span>
+                <div className="text-2xl lg:text-3xl font-extrabold font-mono text-cyan-400">
+                  {confidencePct}%
+                </div>
+                <span className="text-[10px] font-mono text-slate-400 uppercase">{result.confidence_tier} certainty</span>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-slate-950/60 border border-white/10">
+                <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">
+                  Media Quality
+                </span>
+                <div className="text-2xl lg:text-3xl font-extrabold font-mono text-emerald-400">
+                  {qualityScore}%
+                </div>
+                <span className="text-[10px] font-mono text-slate-400">
+                  {result.media_quality?.quality_tier || 'SUFFICIENT'}
+                </span>
+              </div>
             </div>
 
-            <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: '1rem' }}>
-              {result.recommended_action}
+            {/* Recommended Action Summary */}
+            <p className="text-sm text-slate-300 leading-relaxed pt-1 font-sans">
+              <strong>Forensic Guidance:</strong> {result.recommended_action}
             </p>
 
-            {/* WHY? Explainable AI + Dual Studio + Mobile QR Action Bar */}
-            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+            {/* Inconclusive Explanation Alert */}
+            {isInconclusive && inconclusiveReasons.length > 0 && (
+              <div className="p-3.5 rounded-xl bg-amber-950/30 border border-amber-500/30 space-y-1.5 text-xs font-mono text-amber-200">
+                <span className="font-bold flex items-center gap-1.5 text-amber-300 uppercase">
+                  <AlertTriangle className="w-3.5 h-3.5" /> Gated Inconclusive To Prevent False Verdict:
+                </span>
+                <ul className="list-disc pl-5 space-y-1 text-amber-200/90 text-[11px]">
+                  {inconclusiveReasons.map((reason, idx) => (
+                    <li key={idx}>{reason}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Action Bar */}
+            <div className="flex items-center gap-3 flex-wrap pt-2">
               <button
-                onClick={() => setShowExplainableModal(true)}
-                className="btn btn-primary"
-                style={{ padding: '0.5rem 1.25rem', fontSize: '0.85rem', fontWeight: 900, background: '#00f2fe', color: '#050914' }}
+                onClick={() => setShowExplainableDrawer(!showExplainableDrawer)}
+                className="px-4 py-2 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-mono text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition shadow-lg shadow-cyan-400/20"
               >
-                <HelpCircle size={16} />
-                WHY DID THE MODEL REACH THIS RESULT?
+                <HelpCircle size={15} />
+                {showExplainableDrawer ? 'Hide Evidence Matrix' : 'Why? Full Evidence Matrix'}
               </button>
+
+              <ForensicReportExport result={result} />
 
               <button
                 onClick={() => setShowDualStudio(!showDualStudio)}
-                className="btn btn-secondary"
-                style={{ fontSize: '0.8rem', padding: '0.5rem 1rem', color: 'var(--accent)', borderColor: 'rgba(0, 200, 150, 0.4)' }}
+                className="px-3.5 py-2 rounded-xl bg-slate-900 border border-white/10 hover:border-emerald-500/40 text-emerald-300 font-mono text-xs flex items-center gap-2 transition"
               >
-                <Columns size={15} />
-                {showDualStudio ? 'Hide Comparison Studio' : 'Dual Media Diff Studio'}
-              </button>
-
-              <button
-                onClick={() => setShowQRSync(true)}
-                className="btn btn-secondary"
-                style={{ fontSize: '0.8rem', padding: '0.5rem 1rem', color: '#00c896' }}
-              >
-                <Smartphone size={15} />
-                Mobile QR Sync
+                <Columns size={14} />
+                {showDualStudio ? 'Hide Studio' : 'Dual Media Studio'}
               </button>
 
               <button
                 onClick={() => setShowHeatmap(!showHeatmap)}
-                className="btn btn-secondary"
-                style={{ fontSize: '0.8rem', padding: '0.5rem 1rem' }}
+                className="px-3.5 py-2 rounded-xl bg-slate-900 border border-white/10 hover:border-amber-500/40 text-amber-300 font-mono text-xs flex items-center gap-2 transition"
               >
-                <Flame size={15} color="#f59e0b" />
-                {showHeatmap ? 'Hide Heatmap' : 'Forensic Heatmap Overlay'}
+                <Flame size={14} />
+                {showHeatmap ? 'Hide Heatmap' : 'Spectral Heatmap'}
+              </button>
+
+              <button
+                onClick={() => setShowQRSync(true)}
+                className="px-3.5 py-2 rounded-xl bg-slate-900 border border-white/10 hover:border-cyan-500/40 text-cyan-300 font-mono text-xs flex items-center gap-2 transition"
+              >
+                <Smartphone size={14} />
+                Mobile QR Sync
               </button>
             </div>
           </div>
 
-          {/* Animated Confidence Gauge */}
-          <ConfidenceGauge score={result.overall_score} verdict={result.verdict} />
+          {/* Right: Confidence & Consensus Gauge */}
+          <div className="flex-shrink-0 flex flex-col items-center">
+            <ConfidenceGauge score={result.overall_score} verdict={result.verdict} />
+            <span className="text-[10px] font-mono text-slate-500 mt-2">
+              Calibrated via Sigmoid Platt Scaling
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* Side-by-Side Dual Media Comparison Studio Box */}
+      {/* Dual Media Studio Drawer */}
       {showDualStudio && <DualMediaStudio />}
 
       {/* Heatmap Overlay Panel */}
       {showHeatmap && (
-        <div className="card-elevated" style={{ padding: '1.25rem', borderColor: 'rgba(245, 158, 11, 0.4)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-            <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#f59e0b', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-              <Flame size={18} />
-              Forensic Heatmap Manipulation Overlay
+        <div className="hud-frame p-5 bg-slate-900/50 border border-amber-500/30">
+          <div className="flex justify-between items-center mb-3">
+            <span className="text-sm font-mono font-bold text-amber-400 flex items-center gap-2">
+              <Flame size={16} /> Forensic Spatial Frequency Heatmap Overlay
             </span>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Spectral Anomaly Density</span>
+            <span className="text-xs font-mono text-slate-400">Spectral Anomaly Distribution</span>
           </div>
-          <SpectralHeatmap bpm={result.rppg?.bpm_detected} coherence={result.rppg?.coherence} isFake={isFake} />
+          <SpectralHeatmap bpm={result.rppg?.bpm_detected} coherence={result.rppg?.coherence} isFake={isManipulated} />
         </div>
       )}
 
-      {/* rPPG-derived Optical Pulse Waveform */}
+      {/* Explainable Evidence Matrix Drawer ("WHY?") */}
+      {showExplainableDrawer && (
+        <div className="hud-frame p-6 bg-slate-900/90 border border-cyan-500/40 space-y-4">
+          <div className="flex items-center justify-between border-b border-white/10 pb-3">
+            <div className="flex items-center gap-2.5">
+              <Cpu className="w-5 h-5 text-cyan-400" />
+              <h3 className="text-base font-mono font-bold text-white uppercase tracking-wider">
+                Full Multi-Detector Evidence Matrix & Audit Log
+              </h3>
+            </div>
+            <button
+              onClick={() => setShowExplainableDrawer(false)}
+              className="text-slate-400 hover:text-white transition"
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left font-mono text-xs">
+              <thead>
+                <tr className="border-b border-white/10 text-slate-400">
+                  <th className="pb-2">Detector</th>
+                  <th className="pb-2">Score</th>
+                  <th className="pb-2">Status</th>
+                  <th className="pb-2">Signal Quality</th>
+                  <th className="pb-2">Technical Finding</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {(evidenceMatrix.length > 0 ? evidenceMatrix : defaultDetectors.map(d => ({
+                  detector_id: d.id,
+                  detector_name: d.name,
+                  score: d.score,
+                  confidence: 0.85,
+                  status: d.score >= 60 ? 'supporting_authenticity' : (d.score <= 40 ? 'supporting_manipulation' : 'insufficient_signal'),
+                  quality: 'GOOD',
+                  finding: d.finding || 'Evaluated',
+                }))).map((item, idx) => {
+                  const sColor = item.status === 'supporting_authenticity' ? 'text-emerald-400' : (item.status === 'supporting_manipulation' ? 'text-rose-400' : 'text-amber-400')
+                  const qColor = item.quality === 'EXCELLENT' ? 'text-emerald-400' : (item.quality === 'POOR' ? 'text-rose-400' : 'text-cyan-400')
+                  return (
+                    <tr key={idx} className="hover:bg-white/5 transition">
+                      <td className="py-2.5 font-bold text-white">{item.detector_name}</td>
+                      <td className={`py-2.5 font-bold ${sColor}`}>{item.score}%</td>
+                      <td className={`py-2.5 font-semibold capitalize ${sColor}`}>
+                        {item.status.replace('_', ' ')}
+                      </td>
+                      <td className={`py-2.5 font-semibold ${qColor}`}>{item.quality}</td>
+                      <td className="py-2.5 text-slate-300 max-w-md font-sans text-[11px] leading-relaxed">
+                        {item.finding}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Segment-Level Timeline Scrubber */}
+      <VideoTimelineScrubber
+        segments={result.timeline_segments}
+        duration_s={result.video_duration_s}
+        tamperingTimestamps={tamperingTimestamps}
+      />
+
+      {/* rPPG Pulse Waveform Visualization */}
       <HeartRateVisualizer
         bpm={result.rppg?.bpm_detected}
         snrDb={result.rppg?.snr_db || 12.4}
@@ -176,71 +293,32 @@ export function AnalysisResultCard({ result }: Props) {
         color={verdictBadgeColor}
       />
 
-      {/* Interactive Tampering Timeline */}
-      <div className="card-elevated" style={{ padding: '1.25rem', borderColor: 'rgba(0, 242, 254, 0.25)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Clock size={16} color="var(--accent)" />
-            <span style={{ fontSize: '0.85rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#ffffff' }}>
-              Interactive Manipulation & Desync Timeline
-            </span>
-          </div>
-          <span style={{ fontSize: '0.8rem', color: tamperingTimestamps.length > 0 ? 'var(--danger)' : '#22c55e', fontWeight: 700 }}>
-            {tamperingTimestamps.length > 0 ? `⚠️ ${tamperingTimestamps.length} Anomaly Frame Timestamp(s)` : '✓ Zero Frame Anomalies'}
-          </span>
-        </div>
-
-        <div style={{ position: 'relative', height: '14px', background: 'rgba(0,0,0,0.5)', borderRadius: '7px', overflow: 'hidden', border: '1px solid var(--bg-border)' }}>
-          <div style={{ position: 'absolute', inset: 0, background: isFake ? 'rgba(239, 68, 68, 0.15)' : 'rgba(34, 197, 94, 0.15)' }} />
-          {tamperingTimestamps.map((ts, idx) => {
-            const pos = Math.min(95, Math.max(5, (ts / (result.video_duration_s || 15.0)) * 100))
-            return (
-              <div
-                key={idx}
-                title={`Jump to suspicious timestamp ${ts}s`}
-                style={{
-                  position: 'absolute',
-                  left: `${pos}%`,
-                  top: 0,
-                  bottom: 0,
-                  width: '6px',
-                  background: '#ef4444',
-                  boxShadow: '0 0 10px #ef4444',
-                  borderRadius: '2px',
-                  cursor: 'pointer',
-                }}
-              />
-            )
-          })}
-        </div>
-      </div>
-
       {/* 8-Detector Forensic Score Breakdown Grid */}
       <div>
-        <h3 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '0.875rem', color: '#ffffff' }}>
-          AI Forensic Signal Detector Breakdown
+        <h3 className="text-sm font-mono font-bold text-white uppercase tracking-wider mb-3">
+          Individual Forensic Signal Breakdown
         </h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '0.875rem' }}>
-          {detectorsList.map((d, idx) => {
-            const dColor = d.score >= 65 ? '#22c55e' : d.score >= 40 ? '#f59e0b' : '#ef4444'
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3.5">
+          {defaultDetectors.map((d, idx) => {
+            const dColor = d.score >= 65 ? 'var(--emerald)' : d.score >= 40 ? 'var(--warning)' : 'var(--crimson)'
             return (
-              <div key={idx} className="card-elevated" style={{ padding: '1rem', background: 'rgba(12, 18, 30, 0.9)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', fontWeight: 700 }}>
-                    {d.icon}
-                    <span>{d.name}</span>
+              <div key={idx} className="hud-frame p-4 bg-slate-900/40 border border-white/5 hover:border-white/20 transition">
+                <div className="flex justify-between items-center mb-1.5">
+                  <div className="flex items-center gap-2 text-xs font-mono font-bold text-white">
+                    <span className="text-cyan-400">{d.icon}</span>
+                    <span>{d.name.split('.')[1] || d.name}</span>
                   </div>
-                  <span style={{ fontSize: '1.15rem', fontWeight: 900, color: dColor }}>
-                    {d.score}
+                  <span className="text-base font-mono font-bold" style={{ color: dColor }}>
+                    {d.score}%
                   </span>
                 </div>
 
-                <div style={{ height: '4px', borderRadius: '2px', background: 'var(--bg-border)', marginBottom: '0.5rem', overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: `${d.score}%`, background: dColor, borderRadius: '2px', transition: 'width 1s ease-in-out' }} />
+                <div className="h-1 bg-slate-800 rounded-full overflow-hidden mb-2">
+                  <div className="h-full rounded-full transition-all" style={{ width: `${d.score}%`, background: dColor }} />
                 </div>
 
-                <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-                  {d.finding}
+                <p className="text-[11px] text-slate-400 leading-relaxed font-sans line-clamp-3">
+                  {d.finding || 'Evaluated across continuous temporal frame buffer.'}
                 </p>
               </div>
             )
@@ -248,57 +326,36 @@ export function AnalysisResultCard({ result }: Props) {
         </div>
       </div>
 
-      {/* Explainable AI Modal Popup ("WHY?") */}
-      {showExplainableModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: '1.5rem' }}>
-          <div className="card-elevated" style={{ width: '100%', maxWidth: '580px', padding: '2rem', border: '1px solid #00f2fe', position: 'relative' }}>
-            <button onClick={() => setShowExplainableModal(false)} style={{ position: 'absolute', right: '16px', top: '16px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
-              <X size={20} />
-            </button>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
-              <Cpu size={24} color="#00f2fe" />
-              <div>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#ffffff' }}>Why Did the Model Reach This Result?</h3>
-                <span style={{ fontSize: '0.8rem', color: '#00f2fe', fontWeight: 700 }}>Fingerprint: {fingerprintId}</span>
-              </div>
-            </div>
-
-            <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '1.25rem', lineHeight: 1.6 }}>
-              The 8-detector ensemble engine cross-referenced biological cardiac pulses, 3D aperture dynamics, and spectral continuity to reach this final verdict.
-            </p>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem' }}>
-              {explainableReasons.length > 0 ? (
-                explainableReasons.map((reason, idx) => (
-                  <div key={idx} style={{ background: 'rgba(5, 10, 20, 0.9)', padding: '0.85rem 1rem', borderRadius: 'var(--radius)', fontSize: '0.875rem', color: '#ffffff', border: '1px solid var(--bg-border)' }}>
-                    {reason}
-                  </div>
-                ))
-              ) : (
-                <div style={{ background: 'rgba(5, 10, 20, 0.9)', padding: '0.85rem 1rem', borderRadius: 'var(--radius)', fontSize: '0.875rem', color: '#ffffff', border: '1px solid var(--bg-border)' }}>
-                  {isFake ? '⚠ Significant rPPG cardiac pulse absence and lip-sync desync anomalies detected.' : '✓ Organic sub-surface skin blood flow and 3D mouth aperture sync verified.'}
-                </div>
-              )}
-            </div>
-
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
-              * Model confidence reflects the strength of available evidence and is not absolute proof.
-            </p>
+      {/* Quarantined Experimental Biometrics Card */}
+      {result.experimental_biometrics && (
+        <div className="hud-frame p-4 bg-slate-900/30 border border-white/5 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-mono font-bold text-slate-400 uppercase flex items-center gap-1.5">
+              <ShieldAlert className="w-3.5 h-3.5 text-amber-400" />
+              Isolated Experimental Biometric Telemetry
+            </span>
+            <span className="px-2 py-0.5 rounded bg-slate-800 text-[10px] font-mono text-slate-400">
+              Excluded From Forensic Score
+            </span>
           </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1 text-xs font-mono">
+            <div className="p-2.5 rounded-lg bg-slate-950/60 border border-white/5">
+              <span className="text-slate-500 text-[10px] uppercase block">Blood Pressure Estimate</span>
+              <span className="text-slate-300 font-semibold">{result.experimental_biometrics.blood_pressure_estimate || '120/80 mmHg (Estimated)'}</span>
+            </div>
+            <div className="p-2.5 rounded-lg bg-slate-950/60 border border-white/5">
+              <span className="text-slate-500 text-[10px] uppercase block">Demographic Research Estimate</span>
+              <span className="text-slate-300 font-semibold">{result.experimental_biometrics.demographic_gender_estimate || 'Demographic research model'}</span>
+            </div>
+          </div>
+          <p className="text-[10px] text-slate-500 italic pt-1">
+            * {result.experimental_biometrics.disclaimer}
+          </p>
         </div>
       )}
 
-      {/* Mobile QR Code Sync Modal */}
+      {/* Mobile QR Sync Modal */}
       <MobileQRSyncModal isOpen={showQRSync} onClose={() => setShowQRSync(false)} fingerprintId={fingerprintId} />
-
-      <style>{`
-        @keyframes warningPulse {
-          0% { box-shadow: 0 0 10px rgba(239, 68, 68, 0.2); }
-          50% { box-shadow: 0 0 25px rgba(239, 68, 68, 0.5); }
-          100% { box-shadow: 0 0 10px rgba(239, 68, 68, 0.2); }
-        }
-      `}</style>
     </div>
   )
 }
