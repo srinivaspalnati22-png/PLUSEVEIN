@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AnimatePresence } from 'framer-motion'
 import { AuthProvider } from '@/lib/auth'
 import { Navbar } from '@/components/Navbar'
@@ -46,8 +46,9 @@ function HomeRoute() {
 }
 
 function App() {
+  const base = import.meta.env.BASE_URL || '/'
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={base}>
       <AuthProvider>
         <BackgroundVideo />
         <TechCanvasBackground />
@@ -55,6 +56,7 @@ function App() {
         <AnimatePresence mode="wait">
           <Routes>
             <Route path="/" element={<HomeRoute />} />
+            <Route path="/PLUSEVEIN" element={<HomeRoute />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/login" element={<Auth />} />
             <Route path="/landing" element={<Landing />} />
@@ -74,14 +76,8 @@ function App() {
               <PrivateRoute><Settings /></PrivateRoute>
             } />
 
-            {/* 404 */}
-            <Route path="*" element={
-              <div style={{ textAlign: 'center', padding: '6rem 1.5rem', color: 'var(--text-muted)', position: 'relative', zIndex: 1 }}>
-                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>404</div>
-                <p style={{ marginBottom: '1.5rem' }}>Page not found</p>
-                <a href="/" className="btn-primary" style={{ textDecoration: 'none' }}>Go Home</a>
-              </div>
-            } />
+            {/* Always redirect unmatched paths to HomeRoute / Login */}
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </AnimatePresence>
         <SecurityAlertDrawer />
