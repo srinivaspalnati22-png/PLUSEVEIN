@@ -81,13 +81,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(session.user)
       }
       setLoading(false)
+    }).catch(() => {
+      setLoading(false)
     })
 
-    // 3. Listen for Supabase auth state changes
+    // 3. Listen for Supabase auth state changes (crucial for Google OAuth callback)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
         setSession(session)
         setUser(session.user)
+      } else if (!localStorage.getItem('pulsevein_google_session')) {
+        setSession(null)
+        setUser(null)
       }
       setLoading(false)
     })
@@ -110,16 +115,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error: error as Error | null }
   }
 
-  const signInWithGoogle = async (emailInput?: string) => {
-    const targetEmail = emailInput || 'google.user@gmail.com'
-    const googleUser = createGoogleUser(targetEmail)
-    const googleSession = createGoogleSession(googleUser)
+  const signInWithGoogle = async (customRedirect?: string) => {
+    try {
+      localStorage.removeItem('pulsevein_google_session')
 
-    const googleData = { user: googleUser, session: googleSession }
-    localStorage.setItem('pulsevein_google_session', JSON.stringify(googleData))
-    setUser(googleUser)
-    setSession(googleSession)
-    return { error: null }
+      // Clean redirect target to land on app dashboard/workspace
+      const origin = window.location.origin
+      const pathname = window.location.pathname
+      const defaultRedirect = `${origin}${pathname}`.replace(/\/auth\/?$/, '').replace(/\/login\/?$/, '') || origin
+      const targetRedirect = customRedirect || defaultRedirect
+
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: targetRedirect,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'select_account',
+          },
+        },
+      })
+
+      if (error) {
+        return { error: error as Error }
+      }
+      return { error: null }
+    } catch (err: any) {
+      return { error: err instanceof Error ? err : new Error(String(err)) }
+    }
   }
 
   const signOut = async () => {

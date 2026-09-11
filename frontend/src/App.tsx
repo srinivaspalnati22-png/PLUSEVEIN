@@ -17,6 +17,34 @@ import LiveMonitor from '@/pages/LiveMonitor'
 import Settings from '@/pages/Settings'
 import Evaluation from '@/pages/Evaluation'
 
+import { useAuth } from '@/lib/auth'
+
+function HomeRoute() {
+  const { user, loading } = useAuth()
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--bg-base)' }}>
+        <div className="flex gap-1">
+          {[0, 1, 2].map(i => (
+            <div
+              key={i}
+              className="waveform-bar"
+              style={{ animationDelay: `${i * 0.15}s`, height: '16px' }}
+            />
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return <Auth />
+  }
+
+  return <Landing />
+}
+
 function App() {
   return (
     <BrowserRouter>
@@ -26,8 +54,10 @@ function App() {
         <Navbar />
         <AnimatePresence mode="wait">
           <Routes>
-            <Route path="/" element={<Landing />} />
+            <Route path="/" element={<HomeRoute />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/login" element={<Auth />} />
+            <Route path="/landing" element={<Landing />} />
             <Route path="/methodology" element={<Methodology />} />
             <Route path="/evaluation" element={<Evaluation />} />
             <Route path="/results/:id" element={<Results />} />

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, Navigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Activity, Mail, Lock, User, AlertCircle, CheckCircle, ArrowRight, X } from 'lucide-react'
+import { Activity, Mail, Lock, User, AlertCircle, CheckCircle, ArrowRight } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import { GoogleIcon } from '@/components/GoogleIcon'
 
@@ -14,36 +14,25 @@ export default function Auth() {
   const [fullName, setFullName] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
-  // Google Account Prompt Modal State
-  const [showGoogleModal, setShowGoogleModal] = useState(false)
-  const [googleUserEmail, setGoogleUserEmail] = useState('')
   const [googleSubmitting, setGoogleSubmitting] = useState(false)
-
   const [error, setError] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
 
   // Already logged in → redirect to dashboard
   if (!loading && user) return <Navigate to="/dashboard" replace />
 
-  const openGoogleModal = () => {
+  const handleGoogleSignIn = async () => {
     setError('')
-    setShowGoogleModal(true)
-  }
-
-  const handleGoogleAccountSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!googleUserEmail || !googleUserEmail.includes('@')) {
-      setError('Please enter a valid Google Account email address.')
-      return
-    }
     setGoogleSubmitting(true)
     try {
-      await signInWithGoogle(googleUserEmail)
-      setShowGoogleModal(false)
-      navigate('/dashboard')
-    } catch {
-      setError('Google Sign-In failed. Please try again.')
-    } finally {
+      const { error } = await signInWithGoogle()
+      if (error) {
+        setError(error.message || 'Google Sign-In failed. Please verify Supabase provider settings.')
+        setGoogleSubmitting(false)
+      }
+      // If successful, Supabase automatically navigates to Google OAuth consent page
+    } catch (err: any) {
+      setError(err?.message || 'Failed to initialize Google Sign-In.')
       setGoogleSubmitting(false)
     }
   }
@@ -164,12 +153,28 @@ export default function Auth() {
 
           {/* Social Sign-In Button */}
           <button
-            onClick={openGoogleModal}
+            type="button"
+            onClick={handleGoogleSignIn}
+            disabled={googleSubmitting}
             className="btn btn-secondary"
-            style={{ width: '100%', padding: '0.75rem', fontSize: '0.9rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.625rem', fontWeight: 700 }}
+            style={{
+              width: '100%',
+              padding: '0.8rem',
+              fontSize: '0.925rem',
+              marginBottom: '1.25rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.75rem',
+              fontWeight: 700,
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              cursor: googleSubmitting ? 'wait' : 'pointer',
+              transition: 'all 0.2s ease',
+            }}
           >
             <GoogleIcon size={18} />
-            Continue with Google
+            {googleSubmitting ? 'Connecting to Google...' : 'Continue with Google'}
           </button>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', margin: '1.25rem 0', color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -253,42 +258,6 @@ export default function Auth() {
             </button>
           </form>
         </div>
-
-        {/* Google Account Email Input Modal */}
-        <AnimatePresence>
-          {showGoogleModal && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: '1rem' }}>
-              <motion.div initial={{ scale: 0.95, y: 10 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 10 }} className="card-elevated" style={{ width: '100%', maxWidth: '400px', padding: '1.75rem', position: 'relative', border: '1px solid rgba(0, 200, 150, 0.4)' }}>
-                <button onClick={() => setShowGoogleModal(false)} style={{ position: 'absolute', right: '16px', top: '16px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
-                  <X size={18} />
-                </button>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
-                  <GoogleIcon size={24} />
-                  <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#ffffff' }}>Google Account Sign-In</h3>
-                </div>
-
-                <form onSubmit={handleGoogleAccountSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 700, marginBottom: '0.35rem' }}>Enter Google Email Address</label>
-                    <input
-                      type="email"
-                      required
-                      placeholder="username@gmail.com"
-                      value={googleUserEmail}
-                      onChange={e => setGoogleUserEmail(e.target.value)}
-                      style={{ width: '100%', background: 'var(--bg-base)', border: '1px solid var(--bg-border)', borderRadius: 'var(--radius)', padding: '0.75rem', color: '#ffffff', fontSize: '0.9rem' }}
-                    />
-                  </div>
-
-                  <button type="submit" disabled={googleSubmitting} className="btn btn-primary" style={{ padding: '0.875rem', fontSize: '0.9rem', fontWeight: 800, background: '#00c896', color: '#080d1a' }}>
-                    {googleSubmitting ? 'Authenticating...' : 'Sign In with Google Account'}
-                  </button>
-                </form>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </motion.div>
     </div>
   )
