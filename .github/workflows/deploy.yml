@@ -40,6 +40,8 @@ jobs:
 
       - name: Build Frontend
         run: npm run build
+        env:
+          VITE_BASE_PATH: /PLUSEVEIN/
         working-directory: ./frontend
 
       - name: Prepare SPA Fallback (404.html)
