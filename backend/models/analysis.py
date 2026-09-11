@@ -28,7 +28,7 @@ class RPPGSignal(BaseModel):
     signal_quality: str
     status: Optional[str] = "supporting_authenticity"
     quality: Optional[str] = "GOOD"
-    evidence: Optional[Dict[str, Any]] = None
+    evidence: Optional[Any] = None
 
 
 class LipSyncSignal(BaseModel):
@@ -41,7 +41,7 @@ class LipSyncSignal(BaseModel):
     anomaly_timestamps: List[float] = []
     status: Optional[str] = "supporting_authenticity"
     quality: Optional[str] = "GOOD"
-    evidence: Optional[Dict[str, Any]] = None
+    evidence: Optional[Any] = None
 
 
 class BlinkSignal(BaseModel):
@@ -53,7 +53,7 @@ class BlinkSignal(BaseModel):
     confidence: float
     status: Optional[str] = "supporting_authenticity"
     quality: Optional[str] = "GOOD"
-    evidence: Optional[Dict[str, Any]] = None
+    evidence: Optional[Any] = None
 
 
 class HeadPoseSignal(BaseModel):
@@ -64,7 +64,7 @@ class HeadPoseSignal(BaseModel):
     confidence: float
     status: Optional[str] = "supporting_authenticity"
     quality: Optional[str] = "GOOD"
-    evidence: Optional[Dict[str, Any]] = None
+    evidence: Optional[Any] = None
 
 
 class ExpressionSignal(BaseModel):
@@ -75,7 +75,7 @@ class ExpressionSignal(BaseModel):
     confidence: float
     status: Optional[str] = "supporting_authenticity"
     quality: Optional[str] = "GOOD"
-    evidence: Optional[Dict[str, Any]] = None
+    evidence: Optional[Any] = None
 
 
 class AudioFakeSignal(BaseModel):
@@ -87,7 +87,7 @@ class AudioFakeSignal(BaseModel):
     confidence: float
     status: Optional[str] = "supporting_authenticity"
     quality: Optional[str] = "GOOD"
-    evidence: Optional[Dict[str, Any]] = None
+    evidence: Optional[Any] = None
 
 
 class FrequencyArtifactSignal(BaseModel):
@@ -98,7 +98,7 @@ class FrequencyArtifactSignal(BaseModel):
     confidence: float
     status: Optional[str] = "supporting_authenticity"
     quality: Optional[str] = "GOOD"
-    evidence: Optional[Dict[str, Any]] = None
+    evidence: Optional[Any] = None
 
 
 class TemporalSignal(BaseModel):
@@ -109,7 +109,7 @@ class TemporalSignal(BaseModel):
     confidence: float
     status: Optional[str] = "supporting_authenticity"
     quality: Optional[str] = "GOOD"
-    evidence: Optional[Dict[str, Any]] = None
+    evidence: Optional[Any] = None
 
 
 class EnsembleSignal(BaseModel):

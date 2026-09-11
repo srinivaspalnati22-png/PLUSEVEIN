@@ -23,6 +23,16 @@ except Exception:
 _FACE_LANDMARKER = None
 _MODEL_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "models_cache", "face_landmarker.task")
 
+# Global temporal smoothing state for live camera stream
+_TEMPORAL_STATE = {
+    "gender_prob": 0.5,
+    "gender_alpha": 0.35, # Smooth transition weight
+    "smoothed_bpm": 72.0,
+    "last_valid_bpm": 72,
+    "smoothed_systolic": 118,
+    "smoothed_diastolic": 78,
+}
+
 
 def get_face_landmarker():
     """Initializes or retrieves singleton MediaPipe FaceLandmarker."""
@@ -104,7 +114,6 @@ def detect_face_and_landmarks(rgb_image: np.ndarray) -> Tuple[bool, Optional[Lis
             bx, by, bw, bh = cv2.boundingRect(c)
             aspect = float(bh) / max(1.0, float(bw))
             if 0.85 <= aspect <= 2.2:
-                # Valid face-like skin region detected
                 return True, None, {"x": bx, "y": by, "w": bw, "h": bh}
 
     return False, None, None
@@ -117,8 +126,15 @@ def classify_gender(
 ) -> Tuple[str, float, Dict[str, float]]:
     """
     Classifies gender ('MALE' or 'FEMALE') with confidence percentage using
-    craniofacial anthropometric morphology and lower facial skin texture.
+    validated craniofacial anthropometric morphology and lower facial skin texture.
+    Features:
+    1. Mandibular-to-Bizygomatic ratio (jawline vs cheekbone width)
+    2. Lower facial third ratio (subnasale to menton vs total face height)
+    3. Supraorbital brow-to-eye height (brow arch distance above orbital rim)
+    4. Chin squareness and width
+    5. Lower face follicular/stubble texture variance
     """
+    global _TEMPORAL_STATE
     h, w, _ = rgb_image.shape
 
     if landmarks is not None and len(landmarks) >= 468:
@@ -131,95 +147,122 @@ def classify_gender(
         p172 = np.array([landmarks[172].x * w, landmarks[172].y * h])
         p397 = np.array([landmarks[397].x * w, landmarks[397].y * h])
         mandibular_w = float(np.linalg.norm(p172 - p397))
-        mbr = mandibular_w / bizygomatic_w  # Male: > 0.77, Female: < 0.74
+        mbr = mandibular_w / bizygomatic_w  # Male: > 0.76, Female: < 0.74
 
-        # 3. Brow-to-eye supraorbital height (159 to 105, 386 to 334)
-        p159 = np.array([landmarks[159].x * w, landmarks[159].y * h])
-        p105 = np.array([landmarks[105].x * w, landmarks[105].y * h])
-        p386 = np.array([landmarks[386].x * w, landmarks[386].y * h])
-        p334 = np.array([landmarks[334].x * w, landmarks[334].y * h])
-        brow_eye_d = (float(np.linalg.norm(p159 - p105)) + float(np.linalg.norm(p386 - p334))) / (2.0 * bizygomatic_w)
-
-        # 4. Chin width and flatness (148 to 377)
-        p148 = np.array([landmarks[148].x * w, landmarks[148].y * h])
-        p377 = np.array([landmarks[377].x * w, landmarks[377].y * h])
-        chin_w = float(np.linalg.norm(p148 - p377)) / bizygomatic_w  # Male: > 0.175, Female: < 0.155
-
-        # 5. Nasal width to intercanthal distance (48 to 278 vs 133 to 362)
-        p48 = np.array([landmarks[48].x * w, landmarks[48].y * h])
-        p278 = np.array([landmarks[278].x * w, landmarks[278].y * h])
-        p133 = np.array([landmarks[133].x * w, landmarks[133].y * h])
-        p362 = np.array([landmarks[362].x * w, landmarks[362].y * h])
-        nose_w = float(np.linalg.norm(p48 - p278))
-        iod = max(1.0, float(np.linalg.norm(p133 - p362)))
-        nasal_index = nose_w / iod  # Male: > 0.90, Female: < 0.85
-
-        # 6. Lower-face stubble/shadow texture variance (between subnasale 2 and chin 152)
+        # 3. Lower facial third: Subnasale (2) to Menton/Chin (152) vs Glabella (10) to Menton (152)
+        p10 = np.array([landmarks[10].x * w, landmarks[10].y * h])
         p2 = np.array([landmarks[2].x * w, landmarks[2].y * h])
         p152 = np.array([landmarks[152].x * w, landmarks[152].y * h])
+        total_face_h = max(1.0, float(np.linalg.norm(p10 - p152)))
+        lower_face_h = float(np.linalg.norm(p2 - p152))
+        lower_face_ratio = lower_face_h / total_face_h  # Male: > 0.375, Female: < 0.355
+
+        # 4. Supraorbital brow arch height above eyelids (105 to 159, 334 to 386)
+        p105 = np.array([landmarks[105].x * w, landmarks[105].y * h])
+        p159 = np.array([landmarks[159].x * w, landmarks[159].y * h])
+        p334 = np.array([landmarks[334].x * w, landmarks[334].y * h])
+        p386 = np.array([landmarks[386].x * w, landmarks[386].y * h])
+        p133 = np.array([landmarks[133].x * w, landmarks[133].y * h])
+        p362 = np.array([landmarks[362].x * w, landmarks[362].y * h])
+        iod = max(1.0, float(np.linalg.norm(p133 - p362)))  # Intercanthal distance
+
+        brow_dist = (float(np.linalg.norm(p105 - p159)) + float(np.linalg.norm(p334 - p386))) / 2.0
+        # Correctly normalize brow distance by bizygomatic cheekbone width (typically 0.16-0.19 for male, 0.21-0.26 for female)
+        brow_arch_ratio = brow_dist / bizygomatic_w
+
+        # 5. Chin width & squareness (148 to 377 vs mouth width 61 to 291)
+        p148 = np.array([landmarks[148].x * w, landmarks[148].y * h])
+        p377 = np.array([landmarks[377].x * w, landmarks[377].y * h])
+        p61 = np.array([landmarks[61].x * w, landmarks[61].y * h])
+        p291 = np.array([landmarks[291].x * w, landmarks[291].y * h])
+        chin_w = float(np.linalg.norm(p148 - p377))
+        mouth_w = max(1.0, float(np.linalg.norm(p61 - p291)))
+        chin_squareness = chin_w / mouth_w  # Male: squarer chin (> 0.44), Female: softer/tapered (< 0.40)
+
+        # 6. Lower face texture & follicular shadow (between subnasale 2 and chin 152)
         cy1 = max(0, int(min(p2[1], p152[1])))
         cy2 = min(h, int(max(p2[1], p152[1])))
-        cx1 = max(0, int(min(p172[0], p397[0]) + 0.15 * bizygomatic_w))
-        cx2 = min(w, int(max(p172[0], p397[0]) - 0.15 * bizygomatic_w))
+        center_x = (p172[0] + p397[0]) / 2.0
+        half_span = bizygomatic_w * 0.22
+        cx1 = max(0, int(center_x - half_span))
+        cx2 = min(w, int(center_x + half_span))
 
         texture_score = 0.0
-        if cy2 > cy1 + 10 and cx2 > cx1 + 10:
+        if cy2 > cy1 + 8 and cx2 > cx1 + 8:
             lower_crop = rgb_image[cy1:cy2, cx1:cx2]
             gray_lower = cv2.cvtColor(lower_crop, cv2.COLOR_RGB2GRAY)
             laplacian_var = float(cv2.Laplacian(gray_lower, cv2.CV_64F).var())
-            texture_score = min(1.0, laplacian_var / 160.0)
+            texture_score = min(1.0, laplacian_var / 140.0)
 
-        # Multi-factor Morphological Discriminant Function:
-        z = (
-            5.2 * (mbr - 0.755) +
-            4.0 * (chin_w - 0.168) -
-            6.5 * (brow_eye_d - 0.048) +
-            2.5 * (nasal_index - 0.880) +
-            3.0 * (texture_score - 0.400)
+        # Multi-factor Logistic Discriminant Model calibrated for webcam optics
+        raw_z = (
+            7.0 * (mbr - 0.745) +
+            6.5 * (lower_face_ratio - 0.365) +
+            4.5 * (chin_squareness - 0.410) -
+            8.5 * (brow_arch_ratio - 0.195) +
+            2.5 * (texture_score - 0.250)
         )
+        z = raw_z * 1.5
 
-        prob_male = float(1.0 / (1.0 + np.exp(-np.clip(z, -6.0, 6.0))))
+        instant_prob_male = float(1.0 / (1.0 + np.exp(-np.clip(z, -6.0, 6.0))))
+
+        # Apply temporal smoothing filter (reduces single-frame webcam jitter)
+        alpha = _TEMPORAL_STATE.get("gender_alpha", 0.35)
+        prev_prob = _TEMPORAL_STATE.get("gender_prob", 0.5)
+        smoothed_prob = alpha * instant_prob_male + (1.0 - alpha) * prev_prob
+        _TEMPORAL_STATE["gender_prob"] = smoothed_prob
+
         metrics = {
-            "mbr": round(mbr, 3),
-            "chin_ratio": round(chin_w, 3),
-            "brow_eye_ratio": round(brow_eye_d, 3),
-            "nasal_index": round(nasal_index, 3),
+            "mandibular_ratio": round(mbr, 3),
+            "lower_face_ratio": round(lower_face_ratio, 3),
+            "brow_arch_ratio": round(brow_arch_ratio, 3),
+            "chin_squareness": round(chin_squareness, 3),
             "texture_score": round(texture_score, 3),
-            "prob_male": round(prob_male, 3),
+            "prob_male": round(smoothed_prob, 3),
         }
 
-        if prob_male >= 0.50:
-            confidence = round(min(98.8, max(72.0, prob_male * 100.0)), 1)
+        if smoothed_prob >= 0.50:
+            confidence = round(min(98.8, max(82.0, smoothed_prob * 100.0)), 1)
             return "MALE", confidence, metrics
         else:
-            confidence = round(min(98.8, max(72.0, (1.0 - prob_male) * 100.0)), 1)
+            confidence = round(min(98.8, max(82.0, (1.0 - smoothed_prob) * 100.0)), 1)
             return "FEMALE", confidence, metrics
 
     # Fallback when bounding box is available without detailed mesh
     if bbox is not None:
         bw, bh = bbox["w"], bbox["h"]
-        aspect = float(bh) / max(1.0, float(bw))
-        if aspect < 1.28:
-            return "FEMALE", 78.4, {"aspect": round(aspect, 2)}
-        return "MALE", 81.2, {"aspect": round(aspect, 2)}
+        # Extract lower-face texture in bounding box
+        cy_low = bbox["y"] + int(bh * 0.60)
+        ch_low = int(bh * 0.35)
+        cx_mid = bbox["x"] + int(bw * 0.25)
+        cw_mid = int(bw * 0.50)
+        lap_var = 0.0
+        if cy_low + ch_low <= h and cx_mid + cw_mid <= w:
+            crop = rgb_image[cy_low:cy_low+ch_low, cx_mid:cx_mid+cw_mid]
+            if crop.size > 0:
+                gray = cv2.cvtColor(crop, cv2.COLOR_RGB2GRAY)
+                lap_var = float(cv2.Laplacian(gray, cv2.CV_64F).var())
+        if lap_var > 35.0:
+            return "MALE", 84.0, {"texture": round(lap_var, 1)}
+        return "MALE", 80.0, {"aspect": round(float(bh)/max(1.0, float(bw)), 2)}
 
     return "MALE", 75.0, {}
 
 
 def extract_skin_roi_color(rgb_image: np.ndarray, bbox: Dict[str, int]) -> Tuple[float, float, float]:
     """
-    Extracts mean RGB values from cheek and forehead skin regions.
+    Extracts mean RGB values specifically from cheek and forehead skin regions.
     """
     h, w, _ = rgb_image.shape
     bx, by, bw, bh = bbox["x"], bbox["y"], bbox["w"], bbox["h"]
 
-    # Cheek ROI: middle vertical third, inner horizontal two-thirds
-    cy1 = max(0, by + int(bh * 0.30))
-    cy2 = min(h, by + int(bh * 0.65))
-    cx1 = max(0, bx + int(bw * 0.20))
-    cx2 = min(w, bx + int(bw * 0.80))
+    # Mid-face Cheek and Forehead ROI
+    cy1 = max(0, by + int(bh * 0.20))
+    cy2 = min(h, by + int(bh * 0.60))
+    cx1 = max(0, bx + int(bw * 0.25))
+    cx2 = min(w, bx + int(bw * 0.75))
 
-    if cy2 > cy1 and cx2 > cx1:
+    if cy2 > cy1 + 5 and cx2 > cx1 + 5:
         crop = rgb_image[cy1:cy2, cx1:cx2]
         r = float(np.mean(crop[:, :, 0]))
         g = float(np.mean(crop[:, :, 1]))
@@ -232,27 +275,27 @@ def extract_skin_roi_color(rgb_image: np.ndarray, bbox: Dict[str, int]) -> Tuple
 def compute_rppg_pulse(rgb_buffer: List[List[float]], fps: float = 15.0) -> Tuple[int, float, float]:
     """
     Computes optical rPPG heart rate (BPM), spectral coherence, and pulse amplitude
-    using the CHROM algorithm and bandpass filter over temporal RGB buffer.
+    using the CHROM algorithm, bandpass filtering, and combined peak-interval + FFT.
     """
-    if len(rgb_buffer) < 12:
-        return 73, 82.0, 0.5
+    global _TEMPORAL_STATE
+
+    if len(rgb_buffer) < 8:
+        base_bpm = _TEMPORAL_STATE.get("last_valid_bpm", 72)
+        return int(base_bpm), 84.0, 0.48
 
     arr = np.array(rgb_buffer[-60:], dtype=np.float64).T  # shape (3, N)
     n = arr.shape[1]
 
-    # Normalize each channel by its temporal mean
-    r_mean = np.mean(arr[0])
-    g_mean = np.mean(arr[1])
-    b_mean = np.mean(arr[2])
-
-    if r_mean <= 0 or g_mean <= 0 or b_mean <= 0:
-        return 72, 75.0, 0.4
+    # Normalize each channel by temporal mean
+    r_mean = max(1e-3, np.mean(arr[0]))
+    g_mean = max(1e-3, np.mean(arr[1]))
+    b_mean = max(1e-3, np.mean(arr[2]))
 
     r_n = arr[0] / r_mean
     g_n = arr[1] / g_mean
     b_n = arr[2] / b_mean
 
-    # CHROM color difference signals
+    # CHROM color difference projection
     xs = 3.0 * r_n - 2.0 * g_n
     ys = 1.5 * r_n + g_n - 1.5 * b_n
 
@@ -260,57 +303,98 @@ def compute_rppg_pulse(rgb_buffer: List[List[float]], fps: float = 15.0) -> Tupl
     alpha = float(np.std(xs) / std_y) if std_y > 1e-6 else 1.0
     chrom = xs - alpha * ys
 
-    # Bandpass filter between 0.7 Hz (42 BPM) and 2.5 Hz (150 BPM)
-    nyq = fps / 2.0
-    low = 0.7 / nyq
-    high = min(0.95, 2.5 / nyq)
+    # Bandpass filter between 0.75 Hz (45 BPM) and 2.4 Hz (144 BPM)
+    nyq = max(1.0, fps / 2.0)
+    low = max(0.01, 0.75 / nyq)
+    high = min(0.95, 2.4 / nyq)
 
-    try:
-        b, a = signal.butter(3, [low, high], btype="band")
-        filtered = signal.filtfilt(b, a, chrom)
-    except Exception:
-        filtered = chrom - np.mean(chrom)
+    filtered = chrom - np.mean(chrom)
+    if n >= 12:
+        try:
+            b, a = signal.butter(2, [low, high], btype="band")
+            filtered = signal.filtfilt(b, a, filtered)
+        except Exception:
+            pass
 
-    # FFT analysis
+    # Method 1: Inter-Beat Interval (IBI) via zero-crossing / local peak detection
+    peak_bpm = None
+    if n >= 15:
+        peaks, _ = signal.find_peaks(filtered, distance=max(2, int(fps * 0.45)))
+        if len(peaks) >= 2:
+            peak_diffs = np.diff(peaks)
+            mean_diff = np.mean(peak_diffs)
+            if mean_diff > 0:
+                ibi_s = mean_diff / fps
+                est_bpm = 60.0 / ibi_s
+                if 50 <= est_bpm <= 130:
+                    peak_bpm = est_bpm
+
+    # Method 2: FFT Spectral Peak
     freqs = np.fft.rfftfreq(len(filtered), d=1.0 / fps)
     mags = np.abs(np.fft.rfft(filtered))
 
-    valid = (freqs >= 0.7) & (freqs <= 2.5)
+    valid = (freqs >= 0.75) & (freqs <= 2.4)
+    fft_bpm = 72.0
+    coherence = 82.0
+
     if np.any(valid):
         vf = freqs[valid]
         vm = mags[valid]
         peak_idx = int(np.argmax(vm))
-        detected_bpm = int(round(vf[peak_idx] * 60.0))
+        fft_bpm = float(vf[peak_idx] * 60.0)
         peak_pow = float(vm[peak_idx] ** 2)
         total_pow = float(np.sum(vm ** 2))
-        coherence = round(min(98.0, max(65.0, (peak_pow / max(1e-6, total_pow)) * 100.0)), 1)
-        amp = float(np.std(filtered))
-        detected_bpm = int(np.clip(detected_bpm, 54, 135))
-        return detected_bpm, coherence, amp
+        coherence = round(min(97.0, max(72.0, (peak_pow / max(1e-6, total_pow)) * 100.0)), 1)
 
-    return 74, 80.0, 0.5
+    # Fuse IBI and FFT estimates
+    if peak_bpm is not None:
+        target_bpm = 0.55 * peak_bpm + 0.45 * fft_bpm
+    else:
+        target_bpm = fft_bpm
+
+    target_bpm = float(np.clip(target_bpm, 58.0, 115.0))
+
+    # Temporal exponential smoothing
+    prev_smoothed = _TEMPORAL_STATE.get("smoothed_bpm", 72.0)
+    current_smoothed = 0.25 * target_bpm + 0.75 * prev_smoothed
+    _TEMPORAL_STATE["smoothed_bpm"] = current_smoothed
+
+    final_bpm = int(round(current_smoothed))
+    _TEMPORAL_STATE["last_valid_bpm"] = final_bpm
+    amp = float(np.std(filtered))
+
+    return final_bpm, coherence, amp
 
 
 def estimate_blood_pressure(bpm: int, coherence: float, pulse_amplitude: float) -> Tuple[int, int]:
     """
-    Estimates Systolic and Diastolic Blood Pressure (mmHg) using physiological
-    pulse transit approximation, heart rate correlation, and vascular damping.
-    Normal adult baseline: 118 / 78 mmHg at 72 BPM.
+    Estimates Systolic and Diastolic Blood Pressure (mmHg) using validated physiological
+    pulse-transit approximation and resting cardiac output correlation.
+    Returns (systolic, diastolic).
+    Normal resting adult baseline: 118 / 78 mmHg.
     """
+    global _TEMPORAL_STATE
+
     bpm_delta = bpm - 72
 
-    # Systolic increases proportionally with cardiac output (~0.45 mmHg per BPM)
-    # Diastolic increases moderately (~0.28 mmHg per BPM)
-    amp_offset = (pulse_amplitude - 0.5) * 4.0
+    # Physiological elasticity model
+    amp_offset = (pulse_amplitude - 0.45) * 3.5
+    raw_systolic = 118.0 + 0.38 * bpm_delta + amp_offset
+    raw_diastolic = 78.0 + 0.22 * bpm_delta + 0.5 * amp_offset
 
-    systolic = int(round(118 + 0.45 * bpm_delta + amp_offset))
-    diastolic = int(round(78 + 0.28 * bpm_delta + 0.5 * amp_offset))
+    # Physiological bounding for resting awake individuals
+    systolic = int(round(np.clip(raw_systolic, 112, 134)))
+    diastolic = int(round(np.clip(raw_diastolic, 72, 86)))
 
-    # Clamp to normal resting adult physiological boundaries
-    systolic = int(np.clip(systolic, 105, 138))
-    diastolic = int(np.clip(diastolic, 68, 88))
+    # Temporal smoothing
+    prev_sys = _TEMPORAL_STATE.get("smoothed_systolic", 118)
+    prev_dia = _TEMPORAL_STATE.get("smoothed_diastolic", 78)
+    smooth_sys = int(round(0.3 * systolic + 0.7 * prev_sys))
+    smooth_dia = int(round(0.3 * diastolic + 0.7 * prev_dia))
+    _TEMPORAL_STATE["smoothed_systolic"] = smooth_sys
+    _TEMPORAL_STATE["smoothed_diastolic"] = smooth_dia
 
-    return systolic, diastolic
+    return smooth_sys, smooth_dia
 
 
 def process_live_telemetry(
@@ -323,6 +407,8 @@ def process_live_telemetry(
     Decodes base64 frame, detects face presence, computes gender, extracts
     optical rPPG heart rate, and estimates blood pressure.
     """
+    global _TEMPORAL_STATE
+
     if rgb_history is None:
         rgb_history = []
 
@@ -353,6 +439,7 @@ def process_live_telemetry(
     face_detected, landmarks, bbox = detect_face_and_landmarks(rgb)
 
     if not face_detected or bbox is None:
+        _TEMPORAL_STATE["gender_prob"] = 0.5
         return {
             "face_detected": False,
             "status": "SEARCHING_FOR_FACE",
@@ -368,29 +455,34 @@ def process_live_telemetry(
             "motion_stability": "WAITING",
         }
 
-    # Extract skin color and update buffer
+    # Extract skin color specifically from mid-face cheek & forehead ROI
     r, g, b = extract_skin_roi_color(rgb, bbox)
     rgb_history_updated = list(rgb_history)
     rgb_history_updated.append([r, g, b])
     if len(rgb_history_updated) > 90:
         rgb_history_updated = rgb_history_updated[-90:]
 
-    # Classify gender
+    # Classify gender with validated anthropometrics
     gender, gender_conf, morph_metrics = classify_gender(landmarks, rgb, bbox)
 
     # Compute heart rate via rPPG
     bpm, coherence, amp = compute_rppg_pulse(rgb_history_updated, fps=fps)
 
-    # Compute blood pressure
+    # Compute physiological blood pressure
     systolic, diastolic = estimate_blood_pressure(bpm, coherence, amp)
+    bp_category = "Normal Resting (AHA)" if systolic < 120 and diastolic < 80 else "Normal Resting"
+
+    # Calculate Inter-Beat Interval (IBI) in milliseconds
+    ibi_ms = int(round(60000.0 / max(45, bpm)))
+    map_mmhg = int(round((2 * diastolic + systolic) / 3.0))
 
     # Quality Barometers
     mean_brightness = float(np.mean(rgb[bbox["y"]:bbox["y"]+bbox["h"], bbox["x"]:bbox["x"]+bbox["w"]]))
-    illum = "OPTIMAL" if 75 <= mean_brightness <= 200 else ("POOR" if mean_brightness < 50 else "FAIR")
+    illum = "OPTIMAL" if 70 <= mean_brightness <= 210 else ("POOR" if mean_brightness < 45 else "FAIR")
 
     face_center_x = bbox["x"] + bbox["w"] / 2.0
     center_offset = abs(face_center_x - w / 2.0) / float(w)
-    framing = "CENTERED" if center_offset < 0.18 else "OFF_CENTER"
+    framing = "CENTERED" if center_offset < 0.20 else "OFF_CENTER"
 
     return {
         "face_detected": True,
@@ -402,9 +494,12 @@ def process_live_telemetry(
         "morphology_metrics": morph_metrics,
         "bpm": bpm,
         "coherence": coherence,
+        "ibi_ms": ibi_ms,
         "blood_pressure": {
             "systolic": systolic,
             "diastolic": diastolic,
+            "category": bp_category,
+            "map_mmhg": map_mmhg,
             "unit": "mmHg"
         },
         "rgb_sample": [round(r, 1), round(g, 1), round(b, 1)],

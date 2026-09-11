@@ -5,10 +5,10 @@ import os
 
 class Settings(BaseSettings):
     # Supabase
-    SUPABASE_URL: str
-    SUPABASE_SERVICE_ROLE_KEY: str
-    SUPABASE_ANON_KEY: str
-    SUPABASE_JWT_SECRET: Optional[str] = ""
+    SUPABASE_URL: str = os.getenv("SUPABASE_URL", "https://wxucgspsyekiwbxjjrnw.supabase.co")
+    SUPABASE_SERVICE_ROLE_KEY: str = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "development_fallback_secret_key")
+    SUPABASE_ANON_KEY: str = os.getenv("SUPABASE_ANON_KEY", "development_fallback_anon_key")
+    SUPABASE_JWT_SECRET: Optional[str] = os.getenv("SUPABASE_JWT_SECRET", "")
 
     # App
     APP_ENV: str = "development"
