@@ -1,3 +1,5 @@
+import { getAssetUrl } from '@/lib/assets'
+
 export function BackgroundVideo() {
   return (
     <div
@@ -25,7 +27,7 @@ export function BackgroundVideo() {
         }}
       >
         <video
-          src="/videos/bg.mp4"
+          src={getAssetUrl('videos/bg.mp4')}
           autoPlay
           loop
           muted

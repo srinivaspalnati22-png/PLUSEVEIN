@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { getAssetUrl } from '@/lib/assets'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowRight,
@@ -356,7 +357,7 @@ export default function Landing() {
                   }}
                 >
                   <img
-                    src={sandboxMode === 'fake' ? '/images/deepfake_comparison.png' : '/images/rppg_scan.png'}
+                    src={sandboxMode === 'fake' ? getAssetUrl('images/deepfake_comparison.png') : getAssetUrl('images/rppg_scan.png')}
                     alt="Biometric Analysis Sandbox"
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   />
@@ -733,7 +734,7 @@ export default function Landing() {
               }}
             >
               <video
-                src="/videos/start_guide_demo.mp4"
+                src={getAssetUrl('videos/start_guide_demo.mp4')}
                 controls
                 autoPlay
                 style={{ width: '100%', maxHeight: '500px', objectFit: 'contain', display: 'block' }}

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Columns, Play, AlertOctagon, CheckCircle2, HeartPulse, Mic } from 'lucide-react'
+import { getAssetUrl } from '@/lib/assets'
 
 export function DualMediaStudio() {
   const [activeTab, setActiveTab] = useState<'rppg' | 'lipsync'>('rppg')
@@ -65,7 +66,7 @@ export function DualMediaStudio() {
           </div>
 
           <div style={{ height: '140px', background: '#000', borderRadius: 'var(--radius)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '0.75rem', border: '1px solid var(--bg-border)' }}>
-            <img src="/images/rppg_scan.png" alt="Reference Media A" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <img src={getAssetUrl('images/rppg_scan.png')} alt="Reference Media A" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           </div>
 
           <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
@@ -84,7 +85,7 @@ export function DualMediaStudio() {
           </div>
 
           <div style={{ height: '140px', background: '#000', borderRadius: 'var(--radius)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '0.75rem', border: '1px solid var(--bg-border)' }}>
-            <img src="/images/deepfake_comparison.png" alt="Suspected Deepfake Media B" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <img src={getAssetUrl('images/deepfake_comparison.png')} alt="Suspected Deepfake Media B" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           </div>
 
           <div style={{ fontSize: '0.8rem', color: '#ef4444', fontWeight: 700 }}>
