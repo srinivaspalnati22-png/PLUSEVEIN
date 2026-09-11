@@ -6,7 +6,7 @@ import { useAuth } from '@/lib/auth'
 import { GoogleIcon } from '@/components/GoogleIcon'
 
 export default function Auth() {
-  const { user, signIn, signUp, signInWithGoogle, loading } = useAuth()
+  const { user, signIn, signUp, signInWithGoogle, signInAsGuest, loading } = useAuth()
   const navigate = useNavigate()
   const [tab, setTab] = useState<'login' | 'signup'>('login')
   const [email, setEmail] = useState('')
@@ -35,6 +35,12 @@ export default function Auth() {
       setError(err?.message || 'Failed to initialize Google Sign-In.')
       setGoogleSubmitting(false)
     }
+  }
+
+  const handleGuestAccess = async () => {
+    setSubmitting(true)
+    await signInAsGuest()
+    navigate('/dashboard')
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -255,6 +261,34 @@ export default function Auth() {
             >
               {submitting ? 'Authenticating...' : tab === 'login' ? 'Sign In to Platform' : 'Create Account'}
               <ArrowRight size={18} />
+            </button>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', margin: '0.5rem 0', color: 'var(--text-muted)', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <div style={{ flex: 1, height: '1px', background: 'var(--bg-border)' }} />
+              <span>or bypass</span>
+              <div style={{ flex: 1, height: '1px', background: 'var(--bg-border)' }} />
+            </div>
+
+            <button
+              type="button"
+              onClick={handleGuestAccess}
+              className="btn"
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                fontSize: '0.85rem',
+                fontWeight: 800,
+                background: 'rgba(0, 240, 255, 0.08)',
+                border: '1px solid rgba(0, 240, 255, 0.3)',
+                color: 'var(--cyan)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem',
+                cursor: 'pointer',
+              }}
+            >
+              Instant Analyst Access (One-Click Bypass)
             </button>
           </form>
         </div>

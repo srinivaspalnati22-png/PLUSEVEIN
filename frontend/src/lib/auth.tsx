@@ -8,7 +8,8 @@ interface AuthContextType {
   loading: boolean
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>
   signUp: (email: string, password: string, fullName?: string) => Promise<{ error: Error | null }>
-  signInWithGoogle: (emailInput?: string) => Promise<{ error: Error | null }>
+  signInWithGoogle: (customRedirect?: string) => Promise<{ error: Error | null }>
+  signInAsGuest: () => Promise<void>
   signOut: () => Promise<void>
 }
 
@@ -145,6 +146,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const signInAsGuest = async () => {
+    const guestUser = createGoogleUser('forensic.analyst@pulsevein.ai')
+    guestUser.user_metadata = {
+      full_name: 'Lead Forensic Investigator',
+      avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+    }
+    const guestSession = createGoogleSession(guestUser)
+    localStorage.setItem('pulsevein_google_session', JSON.stringify({ user: guestUser, session: guestSession }))
+    setUser(guestUser)
+    setSession(guestSession)
+  }
+
   const signOut = async () => {
     localStorage.removeItem('pulsevein_google_session')
     setUser(null)
@@ -153,7 +166,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, signInWithGoogle, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, signInWithGoogle, signInAsGuest, signOut }}>
       {children}
     </AuthContext.Provider>
   )
