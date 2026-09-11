@@ -2,10 +2,6 @@
   "version": 2,
   "builds": [
     {
-      "src": "api/index.py",
-      "use": "@vercel/python"
-    },
-    {
       "src": "frontend/package.json",
       "use": "@vercel/static-build",
       "config": {
@@ -14,26 +10,6 @@
     }
   ],
   "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "api/index.py"
-    },
-    {
-      "src": "/analyze/(.*)",
-      "dest": "api/index.py"
-    },
-    {
-      "src": "/health",
-      "dest": "api/index.py"
-    },
-    {
-      "src": "/docs",
-      "dest": "api/index.py"
-    },
-    {
-      "src": "/openapi.json",
-      "dest": "api/index.py"
-    },
     {
       "handle": "filesystem"
     },
