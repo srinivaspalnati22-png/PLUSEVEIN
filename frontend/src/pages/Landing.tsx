@@ -571,6 +571,191 @@ export default function Landing() {
       </section>
 
       {/* ====================================================
+          2B. FORENSIC VISUAL LAB & EVIDENCE GALLERY
+         ==================================================== */}
+      <section
+        style={{
+          padding: '5rem 1.5rem',
+          background: 'rgba(7, 13, 30, 0.65)',
+          borderTop: '1px solid var(--bg-border)',
+        }}
+      >
+        <div style={{ maxWidth: '1360px', margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.45rem',
+                color: 'var(--emerald)',
+                fontSize: '0.8rem',
+                fontWeight: 800,
+                textTransform: 'uppercase',
+                letterSpacing: '0.12em',
+                marginBottom: '0.75rem',
+                background: 'rgba(0, 245, 155, 0.1)',
+                padding: '0.35rem 0.85rem',
+                borderRadius: '20px',
+                border: '1px solid rgba(0, 245, 155, 0.25)',
+              }}
+            >
+              <Activity size={16} />
+              Forensic Lab Inspection Previews
+            </div>
+            <h2 style={{ fontSize: 'clamp(2.2rem, 3.8vw, 3rem)', fontWeight: 900, color: '#ffffff' }}>
+              Sub-Surface Biological Telemetry & Kinematics
+            </h2>
+            <p style={{ color: 'var(--text-secondary)', maxWidth: '640px', margin: '0.75rem auto 0', fontSize: '1.05rem' }}>
+              Explore authentic high-resolution forensic captures extracted by PULSEVEIN's optical signal processing pipeline.
+            </p>
+          </div>
+
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+              gap: '2rem',
+            }}
+          >
+            {/* Card 1: rPPG Blood Volume Extraction */}
+            <div
+              className="card-elevated hud-frame"
+              style={{
+                overflow: 'hidden',
+                borderRadius: 'var(--radius-xl)',
+                border: '1px solid rgba(0, 240, 255, 0.3)',
+                background: 'rgba(7, 13, 30, 0.85)',
+              }}
+            >
+              <div style={{ position: 'relative', height: '240px', overflow: 'hidden' }}>
+                <img
+                  src={getAssetUrl('images/rppg_scan.png')}
+                  alt="Optical Subcutaneous Capillary Scan"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '12px',
+                    left: '12px',
+                    padding: '0.3rem 0.65rem',
+                    background: 'rgba(3, 7, 18, 0.85)',
+                    backdropFilter: 'blur(8px)',
+                    borderRadius: 'var(--radius)',
+                    border: '1px solid rgba(0, 240, 255, 0.3)',
+                    fontSize: '0.7rem',
+                    fontFamily: 'var(--font-mono)',
+                    color: 'var(--cyan)',
+                    fontWeight: 700,
+                  }}
+                >
+                  CHROM OPTICAL EXTRACTION
+                </div>
+              </div>
+              <div style={{ padding: '1.5rem' }}>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#ffffff', marginBottom: '0.5rem' }}>
+                  Micro-Vascular Hemoglobin Pulse Map
+                </h3>
+                <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                  Extracts raw chromatic photoplethysmogram waveforms from cheek ROIs across 540–580 nm light absorption spectra to verify cardiovascular circulation.
+                </p>
+              </div>
+            </div>
+
+            {/* Card 2: 3D Lip-Sync Neuromuscular Phase Desync */}
+            <div
+              className="card-elevated hud-frame"
+              style={{
+                overflow: 'hidden',
+                borderRadius: 'var(--radius-xl)',
+                border: '1px solid rgba(139, 92, 246, 0.3)',
+                background: 'rgba(7, 13, 30, 0.85)',
+              }}
+            >
+              <div style={{ position: 'relative', height: '240px', overflow: 'hidden' }}>
+                <img
+                  src={getAssetUrl('images/lipsync_analysis.png')}
+                  alt="3D Neuromuscular Lip-Sync Analysis"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '12px',
+                    left: '12px',
+                    padding: '0.3rem 0.65rem',
+                    background: 'rgba(3, 7, 18, 0.85)',
+                    backdropFilter: 'blur(8px)',
+                    borderRadius: 'var(--radius)',
+                    border: '1px solid rgba(139, 92, 246, 0.3)',
+                    fontSize: '0.7rem',
+                    fontFamily: 'var(--font-mono)',
+                    color: 'var(--violet)',
+                    fontWeight: 700,
+                  }}
+                >
+                  KINEMATIC ACOUSTIC DSP
+                </div>
+              </div>
+              <div style={{ padding: '1.5rem' }}>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#ffffff', marginBottom: '0.5rem' }}>
+                  3D Vocal Phase Delay Correlation
+                </h3>
+                <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                  Measures mouth aperture area acceleration against vocal formant speech energy envelopes to flag generative dubbing and lip morphing desyncs.
+                </p>
+              </div>
+            </div>
+
+            {/* Card 3: Deepfake Comparison & Artifact Inspection */}
+            <div
+              className="card-elevated hud-frame"
+              style={{
+                overflow: 'hidden',
+                borderRadius: 'var(--radius-xl)',
+                border: '1px solid rgba(255, 42, 95, 0.3)',
+                background: 'rgba(7, 13, 30, 0.85)',
+              }}
+            >
+              <div style={{ position: 'relative', height: '240px', overflow: 'hidden' }}>
+                <img
+                  src={getAssetUrl('images/deepfake_comparison.png')}
+                  alt="Organic Human vs AI Deepfake Comparison"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '12px',
+                    left: '12px',
+                    padding: '0.3rem 0.65rem',
+                    background: 'rgba(3, 7, 18, 0.85)',
+                    backdropFilter: 'blur(8px)',
+                    borderRadius: 'var(--radius)',
+                    border: '1px solid rgba(255, 42, 95, 0.3)',
+                    fontSize: '0.7rem',
+                    fontFamily: 'var(--font-mono)',
+                    color: 'var(--crimson)',
+                    fontWeight: 700,
+                  }}
+                >
+                  SIDE-BY-SIDE FORENSIC AUDIT
+                </div>
+              </div>
+              <div style={{ padding: '1.5rem' }}>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#ffffff', marginBottom: '0.5rem' }}>
+                  Organic Human vs Synthetic SORA/Gen-3
+                </h3>
+                <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                  Exposes microscopic eye-blink periodicity absence, synthetic high-frequency spectral artifacts, and head pose tremor discrepancies.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ====================================================
           3. REAL-TIME EXPO BENCHMARK TICKER SECTION
          ==================================================== */}
       <section

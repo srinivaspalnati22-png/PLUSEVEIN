@@ -1,6 +1,22 @@
+import { useEffect, useRef } from 'react'
 import { getAssetUrl } from '@/lib/assets'
 
 export function BackgroundVideo() {
+  const videoRef = useRef<HTMLVideoElement | null>(null)
+
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.defaultMuted = true
+      videoRef.current.muted = true
+      const playPromise = videoRef.current.play()
+      if (playPromise !== undefined) {
+        playPromise.catch(() => {
+          // Autoplay policy handled gracefully
+        })
+      }
+    }
+  }, [])
+
   return (
     <div
       style={{
@@ -17,16 +33,17 @@ export function BackgroundVideo() {
         justifyContent: 'center',
       }}
     >
-      {/* Full Cover Stable Background Video (No whole video rotation) */}
+      {/* Full Cover Stable Background Video */}
       <div
         style={{
           width: '100vw',
           height: '100vh',
-          opacity: 0.55,
-          filter: 'brightness(1.1) contrast(1.25) saturate(1.8)',
+          opacity: 0.75,
+          filter: 'brightness(1.15) contrast(1.2) saturate(1.6)',
         }}
       >
         <video
+          ref={videoRef}
           src={getAssetUrl('videos/bg.mp4')}
           autoPlay
           loop
@@ -45,7 +62,7 @@ export function BackgroundVideo() {
         style={{
           position: 'absolute',
           inset: 0,
-          background: 'radial-gradient(circle at center, rgba(8, 13, 26, 0.5) 0%, rgba(8, 13, 26, 0.88) 100%)',
+          background: 'radial-gradient(circle at center, rgba(3, 7, 18, 0.42) 0%, rgba(3, 7, 18, 0.82) 100%)',
           pointerEvents: 'none',
         }}
       />

@@ -149,6 +149,27 @@ export function Navbar() {
               <div className="flex items-center gap-1.5">
                 <Link
                   to="/settings"
+                  className="flex items-center gap-2 py-1 px-2.5 rounded-lg bg-slate-900/80 hover:bg-slate-800 border border-white/[0.08] text-slate-200 transition shadow-sm"
+                  title="Profile & Settings"
+                >
+                  {user.user_metadata?.avatar_url || user.user_metadata?.picture ? (
+                    <img
+                      src={user.user_metadata?.avatar_url || user.user_metadata?.picture}
+                      alt="User avatar"
+                      className="w-5 h-5 rounded-full object-cover ring-1 ring-cyan-400/50"
+                      referrerPolicy="no-referrer"
+                    />
+                  ) : (
+                    <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-cyan-500 to-emerald-400 flex items-center justify-center text-[10px] font-bold text-slate-950">
+                      {(user.user_metadata?.full_name || user.email || 'A').charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <span className="text-xs font-mono font-medium max-w-[110px] truncate">
+                    {user.user_metadata?.full_name || user.email?.split('@')[0] || 'Analyst'}
+                  </span>
+                </Link>
+                <Link
+                  to="/settings"
                   className="p-2 rounded-lg bg-slate-900/60 hover:bg-slate-800 border border-white/[0.08] text-slate-300 hover:text-white transition shadow-sm"
                   title="Settings & API"
                 >

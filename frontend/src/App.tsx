@@ -20,28 +20,6 @@ import Evaluation from '@/pages/Evaluation'
 import { useAuth } from '@/lib/auth'
 
 function HomeRoute() {
-  const { user, loading } = useAuth()
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--bg-base)' }}>
-        <div className="flex gap-1">
-          {[0, 1, 2].map(i => (
-            <div
-              key={i}
-              className="waveform-bar"
-              style={{ animationDelay: `${i * 0.15}s`, height: '16px' }}
-            />
-          ))}
-        </div>
-      </div>
-    )
-  }
-
-  if (!user) {
-    return <Auth />
-  }
-
   return <Landing />
 }
 

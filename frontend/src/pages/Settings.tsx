@@ -76,18 +76,64 @@ axios.post('http://localhost:8000/api/analyze', form, {
       <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem', maxWidth: '880px' }}>
         {/* User Profile Card */}
         <div className="hud-frame" style={{ padding: '2rem', border: '1px solid rgba(0, 240, 255, 0.3)' }}>
-          <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#ffffff', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <User size={20} color="var(--cyan)" />
-            Authenticated User Profile
-          </h3>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
+              <User size={20} color="var(--cyan)" />
+              Authenticated User Profile
+            </h3>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.3rem 0.65rem', borderRadius: '6px', background: 'rgba(52, 211, 153, 0.1)', border: '1px solid rgba(52, 211, 153, 0.3)', color: '#34d399', fontSize: '0.75rem', fontFamily: 'var(--font-mono)' }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#34d399' }} />
+              Supabase Connected
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem', padding: '1rem', background: 'rgba(0, 240, 255, 0.04)', borderRadius: '10px', border: '1px solid rgba(0, 240, 255, 0.15)' }}>
+            {user?.user_metadata?.avatar_url || user?.user_metadata?.picture ? (
+              <img
+                src={user.user_metadata?.avatar_url || user.user_metadata?.picture}
+                alt="Profile"
+                style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--cyan)' }}
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--cyan) 0%, var(--crimson) 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, color: '#030712', fontSize: '1.2rem' }}>
+                {(user?.user_metadata?.full_name || user?.email || 'A').charAt(0).toUpperCase()}
+              </div>
+            )}
+            <div>
+              <div style={{ color: '#ffffff', fontWeight: 800, fontSize: '1.05rem' }}>
+                {user?.user_metadata?.full_name || user?.user_metadata?.name || 'Forensic Investigator'}
+              </div>
+              <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                {user?.email || 'analyst@pulsevein.ai'}
+              </div>
+            </div>
+          </div>
+
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '0.825rem', color: 'var(--text-secondary)', fontWeight: 700, marginBottom: '0.35rem' }}>User Email</label>
-              <input type="text" value={user?.email || 'analyst@pulsevein.ai'} disabled style={{ width: '100%', background: 'var(--bg-base)', border: '1px solid var(--bg-border)', borderRadius: 'var(--radius)', padding: '0.75rem', color: '#ffffff', fontSize: '0.9rem', opacity: 0.8, fontFamily: 'var(--font-mono)' }} />
+              <label style={{ display: 'block', fontSize: '0.825rem', color: 'var(--text-secondary)', fontWeight: 700, marginBottom: '0.35rem' }}>Authentication Provider</label>
+              <input
+                type="text"
+                value={
+                  user?.app_metadata?.provider === 'google'
+                    ? 'Google OAuth 2.0 (Verified via Supabase)'
+                    : user?.app_metadata?.provider === 'guest'
+                    ? 'Instant Guest Access (Bypass)'
+                    : 'Email & Password (Supabase RLS)'
+                }
+                disabled
+                style={{ width: '100%', background: 'var(--bg-base)', border: '1px solid var(--bg-border)', borderRadius: 'var(--radius)', padding: '0.75rem', color: '#ffffff', fontSize: '0.9rem', opacity: 0.9, fontFamily: 'var(--font-mono)' }}
+              />
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: '0.825rem', color: 'var(--text-secondary)', fontWeight: 700, marginBottom: '0.35rem' }}>Account Role</label>
-              <input type="text" value="Forensic Auditor (Authorized)" disabled style={{ width: '100%', background: 'var(--bg-base)', border: '1px solid var(--bg-border)', borderRadius: 'var(--radius)', padding: '0.75rem', color: 'var(--cyan)', fontWeight: 800, fontSize: '0.9rem', opacity: 0.9, fontFamily: 'var(--font-mono)' }} />
+              <label style={{ display: 'block', fontSize: '0.825rem', color: 'var(--text-secondary)', fontWeight: 700, marginBottom: '0.35rem' }}>Supabase Project URL</label>
+              <input
+                type="text"
+                value="https://wxucgspsyekiwbxjjrnw.supabase.co"
+                disabled
+                style={{ width: '100%', background: 'var(--bg-base)', border: '1px solid var(--bg-border)', borderRadius: 'var(--radius)', padding: '0.75rem', color: 'var(--cyan)', fontWeight: 700, fontSize: '0.85rem', opacity: 0.9, fontFamily: 'var(--font-mono)' }}
+              />
             </div>
           </div>
         </div>
